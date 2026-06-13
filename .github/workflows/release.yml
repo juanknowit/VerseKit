@@ -30,15 +30,8 @@ jobs:
       - name: Restore
         run: dotnet restore VerseKit.slnx
 
-      # ── Generate app icon ──────────────────────────────────────────
-      - name: Install Pillow
-        run: pip install Pillow
-
-      - name: Generate AppIcon-1024.png
-        run: python3 scripts/create-icon.py
-
-      - name: Convert to AppIcon.icns
-        run: bash scripts/generate-icon.sh
+      # App icon (AppIcon.icns) is committed under src/VerseKit.App/Assets
+      # and bundled by scripts/bundle-app.sh — no generation step needed.
 
       # ── Build plugins (arch-independent .NET DLLs) ─────────────────
       - name: Publish WebResourcesManager plugin
