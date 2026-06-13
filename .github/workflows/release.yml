@@ -47,6 +47,12 @@ jobs:
             --self-contained false \
             -c Release -o publish/plugins/WebResourcesManager
 
+      - name: Publish MetadataBrowser plugin
+        run: |
+          dotnet publish plugins/MetadataBrowser \
+            --self-contained false \
+            -c Release -o publish/plugins/MetadataBrowser
+
       # ── Publish the host app ───────────────────────────────────────
       - name: Publish App (Apple Silicon — arm64)
         run: |
@@ -67,15 +73,19 @@ jobs:
       # ── Bundle plugins into each publish folder ────────────────────
       - name: Stage plugins — arm64
         run: |
-          DST="publish/osx-arm64/plugins/WebResourcesManager"
-          mkdir -p "$DST"
-          cp -r publish/plugins/WebResourcesManager/. "$DST/"
+          for p in WebResourcesManager MetadataBrowser; do
+            DST="publish/osx-arm64/plugins/$p"
+            mkdir -p "$DST"
+            cp -r "publish/plugins/$p/." "$DST/"
+          done
 
       - name: Stage plugins — x64
         run: |
-          DST="publish/osx-x64/plugins/WebResourcesManager"
-          mkdir -p "$DST"
-          cp -r publish/plugins/WebResourcesManager/. "$DST/"
+          for p in WebResourcesManager MetadataBrowser; do
+            DST="publish/osx-x64/plugins/$p"
+            mkdir -p "$DST"
+            cp -r "publish/plugins/$p/." "$DST/"
+          done
 
       # ── Assemble .app bundles ──────────────────────────────────────
       - name: Bundle .app (arm64)

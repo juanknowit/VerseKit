@@ -10,12 +10,14 @@ echo "==> Building solution..."
 dotnet build "$BASE/VerseKit.slnx" -c Debug --nologo -v q
 
 echo ""
-echo "==> Installing WebResourcesManager plugin..."
-PLUGIN_SRC="$BASE/plugins/WebResourcesManager/bin/Debug/net10.0"
-PLUGIN_DST="$PLUGIN_INSTALL/WebResourcesManager"
-mkdir -p "$PLUGIN_DST"
-cp -r "$PLUGIN_SRC/". "$PLUGIN_DST/"
-echo "    → $PLUGIN_DST"
+echo "==> Installing plugins..."
+for plugin in WebResourcesManager MetadataBrowser; do
+    PLUGIN_SRC="$BASE/plugins/$plugin/bin/Debug/net10.0"
+    PLUGIN_DST="$PLUGIN_INSTALL/$plugin"
+    mkdir -p "$PLUGIN_DST"
+    cp -r "$PLUGIN_SRC/." "$PLUGIN_DST/"
+    echo "    → $PLUGIN_DST"
+done
 
 echo ""
 echo "==> Launching VerseKit..."
