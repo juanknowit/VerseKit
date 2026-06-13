@@ -6,7 +6,7 @@ VerseKit is a native desktop plugin host for tools that administer Microsoft Dyn
 
 VerseKit is not affiliated with, endorsed by, or sponsored by Microsoft or XrmToolBox.
 
-> **Status:** Early but functional. The shell, connection management, Metadata Browser, and Web Resources Manager plugins are present. Release builds are not yet code-signed or notarized.
+> **Status:** Early but functional. The shell, connection management, Metadata Browser, and Web Resources Manager plugins are present. Release builds are ad-hoc signed but not yet notarized (see [Installing a Release](#installing-a-release)).
 
 ## Technology Stack
 
@@ -36,6 +36,24 @@ VerseKit/
 ├── docs/
 └── scripts/
 ```
+
+## Installing a Release
+
+Download the zip for your Mac from the [latest release](https://github.com/juanknowit/VerseKit/releases/latest):
+
+- **Apple Silicon (M1/M2/M3/M4):** `…-osx-arm64.zip`
+- **Intel Mac:** `…-osx-x64.zip`
+
+Unzip and move `VerseKit.app` to `/Applications`. Because the app is ad-hoc
+signed but **not notarized**, macOS adds a download-quarantine flag and reports
+it as "damaged" on first launch. Clear the flag once, then open normally:
+
+```bash
+xattr -cr "/Applications/VerseKit.app"
+```
+
+Notarization (which removes this step entirely) requires an Apple Developer ID
+and is not yet set up.
 
 ## Development
 

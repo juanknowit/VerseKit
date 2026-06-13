@@ -95,6 +95,18 @@ jobs:
             ${{ steps.version.outputs.VERSION }} \
             dist/x64
 
+      # ── Ad-hoc codesign ────────────────────────────────────────────
+      # No Apple Developer ID, so we sign ad-hoc (-s -). This isn't
+      # notarization, but it gives the bundle a valid signature so Apple
+      # Silicon won't reject it as "damaged" once the user clears the
+      # quarantine flag (see the install notes below).
+      - name: Codesign bundles (ad-hoc)
+        run: |
+          codesign --force --deep --sign - "dist/arm64/VerseKit.app"
+          codesign --force --deep --sign - "dist/x64/VerseKit.app"
+          codesign --verify --deep --strict --verbose=2 "dist/arm64/VerseKit.app"
+          codesign --verify --deep --strict --verbose=2 "dist/x64/VerseKit.app"
+
       # ── Zip the .app bundles ───────────────────────────────────────
       - name: Zip arm64 bundle
         run: |
@@ -124,7 +136,13 @@ jobs:
                - **Apple Silicon (M1/M2/M3/M4):** `…-osx-arm64.zip`
                - **Intel Mac:** `…-osx-x64.zip`
             2. Unzip → drag **VerseKit.app** to your `/Applications` folder.
-            3. First launch: right-click the app → **Open** (bypasses Gatekeeper on unsigned builds).
+            3. **Clear the Gatekeeper quarantine** (required — the app is not
+               notarized). In Terminal, run:
+               ```
+               xattr -cr "/Applications/VerseKit.app"
+               ```
+               Then double-click to open. (macOS reports unsigned downloads as
+               "damaged"; this command removes the download quarantine flag.)
 
             Plugins are bundled inside the `.app` — no extra installation needed.
           files: |
