@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleIdentifier</key>
+    <string>com.versekit.app</string>
+
+    <key>CFBundleName</key>
+    <string>VerseKit</string>
+
+    <key>CFBundleDisplayName</key>
+    <string>VerseKit</string>
+
+    <!-- Must match the published executable filename exactly -->
+    <key>CFBundleExecutable</key>
+    <string>VerseKit.App</string>
+
+    <!-- .icns filename without extension — place in Contents/Resources/ -->
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+
+    <!-- bundle-app.sh substitutes VERSION_PLACEHOLDER at release time -->
+    <key>CFBundleShortVersionString</key>
+    <string>VERSION_PLACEHOLDER</string>
+
+    <key>CFBundleVersion</key>
+    <string>VERSION_PLACEHOLDER</string>
+
+    <key>NSPrincipalClass</key>
+    <string>NSApplication</string>
+
+    <key>NSHighResolutionCapable</key>
+    <true/>
+
+    <key>NSSupportsAutomaticGraphicsSwitching</key>
+    <true/>
+
+    <key>LSMinimumSystemVersion</key>
+    <string>13.0</string>
+
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.developer-tools</string>
+
+    <key>NSHumanReadableCopyright</key>
+    <string>Copyright © 2026 VerseKit Contributors. MIT License.</string>
+</dict>
+</plist>

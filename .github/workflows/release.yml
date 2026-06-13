@@ -1,0 +1,129 @@
+name: Release
+
+# Trigger on version tags: v0.2.0, v1.0.0, etc.
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  build-and-release:
+    name: Build & Publish macOS App
+    runs-on: macos-latest
+
+    permissions:
+      contents: write  # needed to create the GitHub Release
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Restore
+        run: dotnet restore VerseKit.slnx
+
+      # ── Generate app icon ──────────────────────────────────────────
+      - name: Install Pillow
+        run: pip install Pillow
+
+      - name: Generate AppIcon-1024.png
+        run: python3 scripts/create-icon.py
+
+      - name: Convert to AppIcon.icns
+        run: bash scripts/generate-icon.sh
+
+      # ── Build plugins (arch-independent .NET DLLs) ─────────────────
+      - name: Publish WebResourcesManager plugin
+        run: |
+          dotnet publish plugins/WebResourcesManager \
+            --self-contained false \
+            -c Release -o publish/plugins/WebResourcesManager
+
+      # ── Publish the host app ───────────────────────────────────────
+      - name: Publish App (Apple Silicon — arm64)
+        run: |
+          dotnet publish src/VerseKit.App \
+            -r osx-arm64 --self-contained true \
+            -c Release \
+            -p:Version=${{ steps.version.outputs.VERSION }} \
+            -o publish/osx-arm64
+
+      - name: Publish App (Intel — x64)
+        run: |
+          dotnet publish src/VerseKit.App \
+            -r osx-x64 --self-contained true \
+            -c Release \
+            -p:Version=${{ steps.version.outputs.VERSION }} \
+            -o publish/osx-x64
+
+      # ── Bundle plugins into each publish folder ────────────────────
+      - name: Stage plugins — arm64
+        run: |
+          DST="publish/osx-arm64/plugins/WebResourcesManager"
+          mkdir -p "$DST"
+          cp -r publish/plugins/WebResourcesManager/. "$DST/"
+
+      - name: Stage plugins — x64
+        run: |
+          DST="publish/osx-x64/plugins/WebResourcesManager"
+          mkdir -p "$DST"
+          cp -r publish/plugins/WebResourcesManager/. "$DST/"
+
+      # ── Assemble .app bundles ──────────────────────────────────────
+      - name: Bundle .app (arm64)
+        run: |
+          bash scripts/bundle-app.sh \
+            publish/osx-arm64 \
+            ${{ steps.version.outputs.VERSION }} \
+            dist/arm64
+
+      - name: Bundle .app (x64)
+        run: |
+          bash scripts/bundle-app.sh \
+            publish/osx-x64 \
+            ${{ steps.version.outputs.VERSION }} \
+            dist/x64
+
+      # ── Zip the .app bundles ───────────────────────────────────────
+      - name: Zip arm64 bundle
+        run: |
+          cd dist/arm64
+          zip -r --symlinks \
+            "../../VerseKit-${{ steps.version.outputs.VERSION }}-osx-arm64.zip" \
+            "VerseKit.app"
+
+      - name: Zip x64 bundle
+        run: |
+          cd dist/x64
+          zip -r --symlinks \
+            "../../VerseKit-${{ steps.version.outputs.VERSION }}-osx-x64.zip" \
+            "VerseKit.app"
+
+      # ── Create GitHub Release ──────────────────────────────────────
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "VerseKit ${{ github.ref_name }}"
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          body: |
+            ## Installation
+
+            1. Download the zip for your Mac:
+               - **Apple Silicon (M1/M2/M3/M4):** `…-osx-arm64.zip`
+               - **Intel Mac:** `…-osx-x64.zip`
+            2. Unzip → drag **VerseKit.app** to your `/Applications` folder.
+            3. First launch: right-click the app → **Open** (bypasses Gatekeeper on unsigned builds).
+
+            Plugins are bundled inside the `.app` — no extra installation needed.
+          files: |
+            VerseKit-${{ steps.version.outputs.VERSION }}-osx-arm64.zip
+            VerseKit-${{ steps.version.outputs.VERSION }}-osx-x64.zip

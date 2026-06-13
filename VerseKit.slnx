@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/plugins/">
+    <Project Path="plugins/MetadataBrowser/MetadataBrowser.csproj" />
+    <Project Path="plugins/WebResourcesManager/WebResourcesManager.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/VerseKit.App/VerseKit.App.csproj" />
+    <Project Path="src/VerseKit.Core/VerseKit.Core.csproj" />
+    <Project Path="src/VerseKit.PluginSdk/VerseKit.PluginSdk.csproj" />
+  </Folder>
+</Solution>

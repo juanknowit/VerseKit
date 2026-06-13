@@ -1,0 +1,329 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="VerseKit.App.App"
+             xmlns:local="using:VerseKit.App"
+             Name="VerseKit"
+             RequestedThemeVariant="Light">
+
+    <Application.DataTemplates>
+        <local:ViewLocator/>
+    </Application.DataTemplates>
+
+    <!-- ══ Design tokens ═══════════════════════════════════════════
+         One accent blue (macOS system blue) with explicit hover and
+         pressed shades. Radii: 8 for controls, 14 for floating cards,
+         16 for modal sheets. Plugins may reference these too.        -->
+    <Application.Resources>
+        <Color x:Key="AccentColor">#007AFF</Color>
+        <SolidColorBrush x:Key="AccentBrush" Color="#007AFF"/>
+        <SolidColorBrush x:Key="AccentHoverBrush" Color="#0070EB"/>
+        <SolidColorBrush x:Key="AccentPressedBrush" Color="#0062CF"/>
+        <SolidColorBrush x:Key="SuccessBrush" Color="#34C759"/>
+        <!-- Tinted style — pale accent wash with accent-coloured text,
+             the modern macOS "tinted button" / Finder-selection look. -->
+        <SolidColorBrush x:Key="TintBrush" Color="#E9F2FF"/>
+        <SolidColorBrush x:Key="TintHoverBrush" Color="#DCEAFF"/>
+        <SolidColorBrush x:Key="TintPressedBrush" Color="#CBDFFA"/>
+        <SolidColorBrush x:Key="AccentTextBrush" Color="#0066D6"/>
+        <SolidColorBrush x:Key="SuccessTintBrush" Color="#E5F6EA"/>
+        <SolidColorBrush x:Key="SuccessTintHoverBrush" Color="#D7F0DF"/>
+        <SolidColorBrush x:Key="SuccessTintPressedBrush" Color="#C5E8D1"/>
+        <SolidColorBrush x:Key="SuccessTextBrush" Color="#1E8E41"/>
+        <SolidColorBrush x:Key="DangerTintBrush" Color="#FCE9E8"/>
+        <SolidColorBrush x:Key="DangerTintHoverBrush" Color="#FADAD8"/>
+        <SolidColorBrush x:Key="DangerTintPressedBrush" Color="#F5C7C4"/>
+        <SolidColorBrush x:Key="DangerTextBrush" Color="#D70015"/>
+        <SolidColorBrush x:Key="FieldBorderBrush" Color="#D2D2D7"/>
+        <!-- Filled control surfaces (inputs + secondary buttons) -->
+        <SolidColorBrush x:Key="FieldFillBrush" Color="#ECECEF"/>
+        <SolidColorBrush x:Key="FieldFillHoverBrush" Color="#E4E4E9"/>
+        <!-- Faint static edge for white pills (buttons + inputs) -->
+        <SolidColorBrush x:Key="PillEdgeBrush" Color="#E2E2E7"/>
+        <SolidColorBrush x:Key="ControlHoverBrush" Color="#F5F5F7"/>
+        <SolidColorBrush x:Key="ControlPressedBrush" Color="#E9E9EC"/>
+        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#1C1C1E"/>
+        <SolidColorBrush x:Key="TextSecondaryBrush" Color="#6E6E73"/>
+        <CornerRadius x:Key="ControlRadius">8</CornerRadius>
+        <CornerRadius x:Key="CardRadius">14</CornerRadius>
+    </Application.Resources>
+
+    <Application.Styles>
+        <FluentTheme />
+        <!-- Control theme for AvaloniaEdit's TextEditor (used by plugins).
+             Must live at application level so plugin views can use it. -->
+        <StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml"/>
+
+        <!-- ══ TextBox — filled field, no border. Rests as a soft grey
+             fill; on focus it lifts to white with a thin accent ring.
+             No shadows (they clip in tight layouts), no grey outline.
+             The 2px transparent border is always reserved so the focus
+             ring causes no layout shift. -->
+        <Style Selector="TextBox">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+            <Setter Property="CaretBrush" Value="{StaticResource TextPrimaryBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{StaticResource PillEdgeBrush}"/>
+            <Setter Property="CornerRadius" Value="18"/>
+            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="MinHeight" Value="36"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="SelectionBrush" Value="#B3D7FF"/>
+            <Setter Property="FocusAdorner" Value="{x:Null}"/>
+        </Style>
+        <Style Selector="TextBox /template/ Border#PART_BorderElement">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{StaticResource PillEdgeBrush}"/>
+            <Setter Property="CornerRadius" Value="18"/>
+        </Style>
+        <!-- No hover/focus border change — the static edge is the only one -->
+        <Style Selector="TextBox:pointerover /template/ Border#PART_BorderElement">
+            <Setter Property="BorderBrush" Value="{StaticResource PillEdgeBrush}"/>
+        </Style>
+        <Style Selector="TextBox:focus /template/ Border#PART_BorderElement">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="{StaticResource PillEdgeBrush}"/>
+        </Style>
+
+        <!-- ══ ComboBox — filled field, matches TextBox ═══════════ -->
+        <Style Selector="ComboBox">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{StaticResource PillEdgeBrush}"/>
+            <Setter Property="CornerRadius" Value="18"/>
+            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="MinHeight" Value="36"/>
+            <Setter Property="FocusAdorner" Value="{x:Null}"/>
+        </Style>
+        <Style Selector="ComboBox /template/ Border#Background">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{StaticResource PillEdgeBrush}"/>
+            <Setter Property="CornerRadius" Value="18"/>
+        </Style>
+        <Style Selector="ComboBox:pointerover /template/ Border#Background">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="{StaticResource PillEdgeBrush}"/>
+        </Style>
+        <Style Selector="ComboBox:focus /template/ Border#Background">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="{StaticResource PillEdgeBrush}"/>
+        </Style>
+        <Style Selector="ComboBoxItem">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Margin" Value="4,1"/>
+            <Setter Property="Padding" Value="8,6"/>
+        </Style>
+        <Style Selector="ComboBoxItem:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource ControlHoverBrush}"/>
+            <Setter Property="CornerRadius" Value="6"/>
+        </Style>
+        <Style Selector="ComboBoxItem:pointerover TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        </Style>
+        <Style Selector="ComboBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource TintBrush}"/>
+            <Setter Property="CornerRadius" Value="6"/>
+        </Style>
+        <Style Selector="ComboBoxItem:selected TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        </Style>
+
+        <!-- ══ Button — default: white floating pill, faint ambient
+             shadow (macOS Tahoe style). The shadow is small and nearly
+             symmetric so it stays inside the button's padding and never
+             gets clipped by a neighbouring row. Save/Publish/Delete
+             keep their tint via the classes below but float the same. -->
+        <Style Selector="Button">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+            <!-- White pills need a faint static edge to be visible on white
+                 surfaces — no shadow (it clipped), no interaction border. -->
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{StaticResource PillEdgeBrush}"/>
+            <!-- Pill shape (caps at half-height → fully rounded ends) -->
+            <Setter Property="CornerRadius" Value="18"/>
+            <Setter Property="Padding" Value="16,7"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+        </Style>
+        <Style Selector="Button:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#E9E9EE"/>
+        </Style>
+        <Style Selector="Button:pointerover TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        </Style>
+        <Style Selector="Button:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="#DEDEE4"/>
+        </Style>
+        <Style Selector="Button:pressed TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        </Style>
+        <Style Selector="Button:disabled /template/ ContentPresenter">
+            <Setter Property="Opacity" Value="0.45"/>
+        </Style>
+        <!-- Ghost buttons (icon, sidebar rows) carry no edge -->
+        <Style Selector="Button.IconBtn, Button.SidebarProfile, Button.DeleteBtn">
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+
+        <!-- ── Danger / destructive button — tinted red ──────────── -->
+        <Style Selector="Button.Danger">
+            <Setter Property="Background" Value="{StaticResource DangerTintBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource DangerTextBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style Selector="Button.Danger:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource DangerTintHoverBrush}"/>
+        </Style>
+        <Style Selector="Button.Danger:pointerover TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource DangerTextBrush}"/>
+        </Style>
+        <Style Selector="Button.Danger:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource DangerTintPressedBrush}"/>
+        </Style>
+        <Style Selector="Button.Danger:pressed TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource DangerTextBrush}"/>
+        </Style>
+
+        <!-- Primary / Success now share the white floating-pill look
+             (all buttons white except Danger); the classes only add a
+             semibold weight to mark the main action. -->
+        <Style Selector="Button.Primary, Button.Success">
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+
+        <!-- ── Borderless icon button (title bar) ────────────────── -->
+        <Style Selector="Button.IconBtn">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Foreground" Value="#6E6E73"/>
+        </Style>
+        <Style Selector="Button.IconBtn:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#0F000000"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+        </Style>
+        <Style Selector="Button.IconBtn:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="#1A000000"/>
+        </Style>
+
+        <!-- ── Sidebar section header ──────────────────────────────── -->
+        <Style Selector="TextBlock.SidebarHeader">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+            <Setter Property="Margin" Value="14,14,12,3"/>
+            <Setter Property="LetterSpacing" Value="0.6"/>
+        </Style>
+
+        <!-- ── Sidebar source list (ListBox) ───────────────────────── -->
+        <Style Selector="ListBox.SidebarList">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="6,0,6,0"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        </Style>
+        <Style Selector="ListBox.SidebarList:disabled">
+            <Setter Property="Opacity" Value="0.45"/>
+        </Style>
+        <Style Selector="ListBox.SidebarList ListBoxItem">
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="Margin" Value="0,1,0,1"/>
+            <Setter Property="MinHeight" Value="32"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        </Style>
+        <!-- Hover state — keep dark text -->
+        <Style Selector="ListBox.SidebarList ListBoxItem:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#0F000000"/>
+            <Setter Property="CornerRadius" Value="8"/>
+        </Style>
+        <Style Selector="ListBox.SidebarList ListBoxItem:pointerover TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        </Style>
+        <!-- Selected state — Finder-style pale tint, dark text -->
+        <Style Selector="ListBox.SidebarList ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource TintBrush}"/>
+            <Setter Property="CornerRadius" Value="8"/>
+        </Style>
+        <Style Selector="ListBox.SidebarList ListBoxItem:selected TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        </Style>
+        <!-- Selected + focus lost — same tint, no colour jump -->
+        <Style Selector="ListBox.SidebarList:not(:focus-within) ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource TintBrush}"/>
+            <Setter Property="CornerRadius" Value="8"/>
+        </Style>
+        <Style Selector="ListBox.SidebarList:not(:focus-within) ListBoxItem:selected TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        </Style>
+
+        <!-- ── Sidebar profile button ─────────────────────────────── -->
+        <Style Selector="Button.SidebarProfile">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="Margin" Value="6,1,6,1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="MinHeight" Value="32"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        </Style>
+        <Style Selector="Button.SidebarProfile:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#0F000000"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="CornerRadius" Value="8"/>
+        </Style>
+        <Style Selector="Button.SidebarProfile:pointerover TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        </Style>
+        <Style Selector="Button.SidebarProfile:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="#1A000000"/>
+        </Style>
+
+        <!-- ── Hover-reveal delete button inside a SidebarProfile ──── -->
+        <Style Selector="Button.SidebarProfile Button.DeleteBtn">
+            <Setter Property="Opacity" Value="0"/>
+        </Style>
+        <Style Selector="Button.SidebarProfile:pointerover Button.DeleteBtn">
+            <Setter Property="Opacity" Value="0.55"/>
+        </Style>
+        <Style Selector="Button.DeleteBtn">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="4,2"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="Button.DeleteBtn:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#22FF3B30"/>
+        </Style>
+
+        <!-- ── Sidebar status chip — solid green when connected ───── -->
+        <Style Selector="Border.StatusChip">
+            <Setter Property="Background" Value="#F2F2F7"/>
+            <Setter Property="CornerRadius" Value="8"/>
+        </Style>
+        <Style Selector="Border.StatusChip.connected">
+            <Setter Property="Background" Value="#E3F5E9"/>
+        </Style>
+
+        <!-- ── Connection form card ─────────────────────────────────
+             Shadow kept modest: very large blurs are recomposited on
+             every caret blink of a focused field inside the card,
+             which reads as flicker on the transparent acrylic window. -->
+        <Style Selector="Border.FormCard">
+            <Setter Property="CornerRadius" Value="16"/>
+            <Setter Property="Padding" Value="28,24"/>
+            <Setter Property="BoxShadow" Value="0 6 20 2 #2E000000"/>
+            <Setter Property="Background" Value="White"/>
+        </Style>
+    </Application.Styles>
+</Application>

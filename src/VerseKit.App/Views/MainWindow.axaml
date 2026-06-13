@@ -1,0 +1,632 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:VerseKit.App.ViewModels"
+        xmlns:core="using:VerseKit.Core.Models"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="820"
+        x:Class="VerseKit.App.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        x:Name="RootWindow"
+        Title="VerseKit"
+        Width="1280" Height="820"
+        MinWidth="900" MinHeight="600"
+        TransparencyLevelHint="AcrylicBlur"
+        Background="Transparent"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="-1">
+
+    <Design.DataContext>
+        <vm:MainWindowViewModel/>
+    </Design.DataContext>
+
+    <Grid RowDefinitions="52,*">
+
+        <!-- ══ Title bar row ══════════════════════════════════════════
+             The 78px left indent keeps content clear of macOS traffic
+             lights (●●●).  This row is NOT hit-test-visible so clicks
+             on empty title-bar space still drag the window.          -->
+        <!-- The grid itself must stay hit-testable or the settings cog
+             can't receive clicks (IsHitTestVisible=False disables the
+             whole subtree — children cannot opt back in). Empty space
+             still drags the window because the grid has no background;
+             only the title text is explicitly click-through. -->
+        <Grid Grid.Row="0">
+            <TextBlock Text="VerseKit"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       FontSize="13"
+                       FontWeight="SemiBold"
+                       IsHitTestVisible="False"/>
+            <StackPanel HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        Orientation="Horizontal" Spacing="8"
+                        Margin="0,0,12,0">
+
+                <TextBlock Text="{Binding AppVersion}"
+                           FontSize="11"
+                           VerticalAlignment="Center"
+                           Opacity="0.4"/>
+
+                <!-- Settings cog — red dot when an update is available -->
+                <Button Classes="IconBtn"
+                        Command="{Binding ToggleSettingsPanelCommand}"
+                        ToolTip.Tip="Settings">
+                    <Panel>
+                        <TextBlock Text="⚙" FontSize="16" VerticalAlignment="Center" Foreground="White"/>
+                        <Ellipse Width="7" Height="7"
+                                 Fill="#FF3B30"
+                                 HorizontalAlignment="Right"
+                                 VerticalAlignment="Top"
+                                 Margin="0,-1,-2,0"
+                                 IsVisible="{Binding IsUpdateAvailable}"/>
+                    </Panel>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <!-- ══ Main content row ═══════════════════════════════════════ -->
+        <Grid Grid.Row="1" ColumnDefinitions="240,*">
+
+            <!-- ── Sidebar — floating card ────────────────────────────
+                 Solid white panel that floats above the blurred
+                 desktop wallpaper, rounded like a native macOS panel. -->
+            <Border Grid.Column="0"
+                    Margin="8,0,6,10"
+                    CornerRadius="14"
+                    Background="White"
+                    BoxShadow="0 4 24 4 #28000000">
+
+                <DockPanel ClipToBounds="True">
+
+                    <!-- CONNECTIONS section header -->
+                    <TextBlock DockPanel.Dock="Top"
+                               Text="CONNECTIONS"
+                               Classes="SidebarHeader"/>
+
+                    <!-- Connections tree: folders + ungrouped connections -->
+                    <TreeView DockPanel.Dock="Top"
+                              x:Name="ConnectionsTree"
+                              ItemsSource="{Binding SidebarNodes}"
+                              Background="Transparent"
+                              BorderThickness="0"
+                              Padding="2,0,6,0"
+                              Margin="0,0,0,2"
+                              ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <TreeView.Styles>
+                            <Style Selector="TreeViewItem">
+                                <Setter Property="IsExpanded" Value="True"/>
+                                <Setter Property="HorizontalAlignment" Value="Stretch"/>
+                                <Setter Property="MinHeight" Value="0"/>
+                                <Setter Property="Padding" Value="0"/>
+                            </Style>
+                            <!-- No TreeViewItem-level selection/hover fill; the
+                                 connection's own rounded hover is the only one,
+                                 and the green dot shows the active connection. -->
+                            <Style Selector="TreeViewItem:selected /template/ Border#PART_LayoutRoot">
+                                <Setter Property="Background" Value="Transparent"/>
+                            </Style>
+                            <Style Selector="TreeViewItem:pointerover /template/ Border#PART_LayoutRoot">
+                                <Setter Property="Background" Value="Transparent"/>
+                            </Style>
+                        </TreeView.Styles>
+                        <TreeView.DataTemplates>
+
+                            <!-- Folder node -->
+                            <TreeDataTemplate DataType="vm:ConnectionFolder"
+                                              ItemsSource="{Binding Connections}"
+                                              x:DataType="vm:ConnectionFolder">
+                                <Border Classes.dropTarget="{Binding IsDropTarget}"
+                                        CornerRadius="7" Padding="6,3" Margin="-4,1,2,1">
+                                    <Border.Styles>
+                                        <Style Selector="Border.dropTarget">
+                                            <Setter Property="Background" Value="#D7E9FF"/>
+                                        </Style>
+                                    </Border.Styles>
+                                <DockPanel LastChildFill="True">
+                                    <Button DockPanel.Dock="Right" Classes="DeleteBtn"
+                                            Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).DeleteFolderCommand}"
+                                            CommandParameter="{Binding}"
+                                            ToolTip.Tip="Delete folder">
+                                        <TextBlock Text="×" FontSize="13" Foreground="#8E8E93"/>
+                                    </Button>
+                                    <Button DockPanel.Dock="Right" Classes="DeleteBtn"
+                                            Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).RenameFolderCommand}"
+                                            CommandParameter="{Binding}"
+                                            ToolTip.Tip="Rename folder">
+                                        <TextBlock Text="✎" FontSize="11" Foreground="#8E8E93"/>
+                                    </Button>
+                                    <TextBlock Text="{Binding Name}"
+                                               FontSize="13" FontWeight="SemiBold"
+                                               Foreground="#3C3C43"
+                                               VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding Connections.Count, StringFormat='  ({0})'}"
+                                               FontSize="11" Foreground="#AEAEB2"
+                                               VerticalAlignment="Center"/>
+                                </DockPanel>
+                                </Border>
+                            </TreeDataTemplate>
+
+                            <!-- Connection leaf. Negative left margin claws back
+                                 the TreeView's wide per-level indent + reserved
+                                 expander column, keeping only a small indent. -->
+                            <DataTemplate DataType="vm:SavedConnectionItem"
+                                          x:DataType="vm:SavedConnectionItem">
+                                <Button Classes="SidebarProfile"
+                                        Classes.dragging="{Binding IsDragging}"
+                                        Margin="-22,1,6,1"
+                                        Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).ConnectToProfileCommand}"
+                                        CommandParameter="{Binding}">
+                                    <Button.Styles>
+                                        <Style Selector="Button.dragging">
+                                            <Setter Property="Opacity" Value="0.4"/>
+                                        </Style>
+                                    </Button.Styles>
+                                    <DockPanel LastChildFill="True">
+                                        <Button DockPanel.Dock="Right"
+                                                Classes="DeleteBtn"
+                                                Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).EditProfileCommand}"
+                                                CommandParameter="{Binding}"
+                                                ToolTip.Tip="Edit connection">
+                                            <TextBlock Text="✎" FontSize="12" Foreground="#8E8E93"/>
+                                        </Button>
+                                        <Panel DockPanel.Dock="Left"
+                                               Width="8" Height="8"
+                                               Margin="0,0,7,0"
+                                               VerticalAlignment="Center">
+                                            <Ellipse Fill="#26A641"
+                                                     IsVisible="{Binding IsActive}"/>
+                                            <Ellipse Fill="#C0C0C0"
+                                                     IsVisible="{Binding IsActive,
+                                                         Converter={x:Static BoolConverters.Not}}"/>
+                                        </Panel>
+                                        <StackPanel Spacing="1" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Name}"
+                                                       FontSize="13"
+                                                       FontWeight="Medium"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding EnvironmentUrl}"
+                                                       FontSize="10"
+                                                       Opacity="0.5"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </DockPanel>
+                                </Button>
+                            </DataTemplate>
+                        </TreeView.DataTemplates>
+                    </TreeView>
+
+                    <!-- "Add connection" button -->
+                    <Button DockPanel.Dock="Top"
+                            Classes="SidebarProfile"
+                            Command="{Binding OpenNewConnectionCommand}"
+                            IsVisible="{Binding !IsConnectionPanelVisible}">
+                        <!-- Mirror the profile-row geometry: 8px icon slot +
+                             7px gap so the label aligns with profile names
+                             and the + centres on the status dots above. -->
+                        <StackPanel Orientation="Horizontal" Spacing="7">
+                            <TextBlock Text="+" FontSize="14" Width="8"
+                                       TextAlignment="Center"
+                                       Foreground="#8E8E93"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock Text="Add Connection" FontSize="13"
+                                       Foreground="#8E8E93"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- "New folder" button -->
+                    <Button DockPanel.Dock="Top"
+                            Classes="SidebarProfile"
+                            Command="{Binding NewFolderCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="7">
+                            <TextBlock Text="🗀" FontSize="13" Width="8"
+                                       TextAlignment="Center"
+                                       Foreground="#8E8E93"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock Text="New Folder" FontSize="13"
+                                       Foreground="#8E8E93"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Separator -->
+                    <Rectangle DockPanel.Dock="Top"
+                               Height="1" Margin="14,10,14,0"
+                               Opacity="0.12"
+                               Fill="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+
+                    <!-- TOOLS section header -->
+                    <TextBlock DockPanel.Dock="Top"
+                               Text="TOOLS"
+                               Classes="SidebarHeader"/>
+
+                    <!-- Hint shown until a connection is active -->
+                    <TextBlock DockPanel.Dock="Top"
+                               Text="Connect to an environment to use tools."
+                               FontSize="11"
+                               Foreground="#AEAEB2"
+                               Margin="14,2,12,4"
+                               TextWrapping="Wrap"
+                               IsVisible="{Binding !IsConnected}"/>
+
+                    <!-- Connection status chip — solid green when connected -->
+                    <Border DockPanel.Dock="Bottom"
+                            Margin="10,0,10,12"
+                            Padding="10,6"
+                            Classes="StatusChip"
+                            Classes.connected="{Binding IsConnected}"
+                            IsVisible="{Binding ConnectionStatus,
+                                Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                        <DockPanel>
+                            <!-- Cancel an in-flight connection attempt -->
+                            <Button DockPanel.Dock="Right"
+                                    Command="{Binding CancelConnectCommand}"
+                                    IsVisible="{Binding IsConnectingProfile}"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Padding="4,0"
+                                    ToolTip.Tip="Cancel connection attempt">
+                                <TextBlock Text="✕" FontSize="11" Foreground="#FF3B30"/>
+                            </Button>
+                            <TextBlock Text="{Binding ConnectionStatus}"
+                                       FontSize="11"
+                                       Foreground="#3C3C43"
+                                       TextTrimming="CharacterEllipsis"/>
+                        </DockPanel>
+                    </Border>
+
+                    <!-- Plugin list — locked until connected -->
+                    <ListBox ItemsSource="{Binding Plugins}"
+                             SelectedItem="{Binding SelectedPlugin}"
+                             IsEnabled="{Binding IsConnected}"
+                             Classes="SidebarList">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="core:PluginEntry">
+
+                                <StackPanel Spacing="1">
+                                    <TextBlock Text="{Binding Plugin.Name}"
+                                               FontSize="13"
+                                               FontWeight="Medium"/>
+                                    <TextBlock Text="{Binding Plugin.Description}"
+                                               FontSize="11"
+                                               Opacity="0.55"
+                                               TextWrapping="NoWrap"
+                                               TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                </DockPanel>
+            </Border>
+
+            <!-- ── Content area ────────────────────────────────────── -->
+            <Panel Grid.Column="1">
+
+                <!-- Floating content card — matches sidebar style -->
+                <Border Margin="4,0,10,10"
+                        CornerRadius="14"
+                        Background="White"
+                        BoxShadow="0 4 24 4 #28000000"
+                        ClipToBounds="True">
+
+                    <!-- Plugin workspace -->
+                    <Panel>
+                        <!-- Welcome screen -->
+                        <StackPanel IsVisible="{Binding ActivePluginView,
+                                        Converter={x:Static ObjectConverters.IsNull}}"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Spacing="10">
+                            <TextBlock Text="VerseKit"
+                                       FontSize="26"
+                                       FontWeight="Light"
+                                       Foreground="#1C1C1E"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="A macOS toolkit for Microsoft Dataverse administrators."
+                                       FontSize="14"
+                                       Foreground="#636366"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="Select a tool from the sidebar to get started."
+                                       FontSize="14"
+                                       Foreground="#636366"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="Connect to an environment first using the sidebar."
+                                       FontSize="13"
+                                       Foreground="#8E8E93"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="VerseKit is not affiliated with, endorsed by, or sponsored by Microsoft or XrmToolBox."
+                                       FontSize="11"
+                                       Foreground="#8E8E93"
+                                       HorizontalAlignment="Center"
+                                       MaxWidth="440"
+                                       TextAlignment="Center"
+                                       TextWrapping="Wrap"/>
+
+                            <!-- Activation error -->
+                            <Border CornerRadius="8" Padding="14,10" Margin="0,8,0,0"
+                                    Background="#FFF0F0"
+                                    IsVisible="{Binding ActivationError,
+                                        Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                <TextBlock Text="{Binding ActivationError}"
+                                           Foreground="#CC0000"
+                                           TextWrapping="Wrap"
+                                           FontSize="13"/>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- Active plugin view -->
+                        <ContentControl Content="{Binding ActivePluginView}"
+                                        IsVisible="{Binding ActivePluginView,
+                                            Converter={x:Static ObjectConverters.IsNotNull}}"
+                                        HorizontalContentAlignment="Stretch"
+                                        VerticalContentAlignment="Stretch"/>
+                    </Panel>
+                </Border>
+
+                <!-- ── Connection form overlay ─────────────────────────
+                     Full-area dim + modal card, sits above the white card -->
+                <Panel IsVisible="{Binding IsConnectionPanelVisible}" ZIndex="50">
+
+                    <!-- Form card — light/white macOS sheet style -->
+                    <Border Classes="FormCard"
+                            Width="540"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            DataContext="{Binding ConnectionForm}"
+                            x:DataType="vm:ConnectionViewModel">
+
+                        <!-- Explicit dark foreground so labels read on white background -->
+                        <StackPanel Spacing="16" TextElement.Foreground="#1C1C1E">
+
+                            <!-- Header row -->
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right"
+                                        Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).ToggleConnectionPanelCommand}"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        Padding="6"
+                                        ToolTip.Tip="Cancel">
+                                    <TextBlock Text="✕" FontSize="14" Foreground="#8E8E93"/>
+                                </Button>
+                                <TextBlock Text="{Binding FormTitle}"
+                                           FontSize="17"
+                                           FontWeight="SemiBold"
+                                           Foreground="#1C1C1E"
+                                           VerticalAlignment="Center"/>
+                            </DockPanel>
+
+                            <!-- Thin divider -->
+                            <Rectangle Height="1" Fill="#E5E5EA" Margin="-28,0"/>
+
+                            <Grid ColumnDefinitions="130,*"
+                                  RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Profile name"
+                                           FontSize="13" Foreground="#3C3C43"
+                                           VerticalAlignment="Center" Margin="0,0,12,10"/>
+                                <TextBox   Grid.Row="0" Grid.Column="1" Margin="0,0,0,10"
+                                           Text="{Binding Name}"
+                                           PlaceholderText="e.g. Contoso Production"/>
+
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Environment URL"
+                                           FontSize="13" Foreground="#3C3C43"
+                                           VerticalAlignment="Center" Margin="0,0,12,10"/>
+                                <TextBox   Grid.Row="1" Grid.Column="1" Margin="0,0,0,10"
+                                           Text="{Binding EnvironmentUrl}"
+                                           PlaceholderText="https://yourorg.crm.dynamics.com"/>
+
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Auth method"
+                                           FontSize="13" Foreground="#3C3C43"
+                                           VerticalAlignment="Center" Margin="0,0,12,10"/>
+                                <ComboBox  Grid.Row="2" Grid.Column="1" Margin="0,0,0,10"
+                                           HorizontalAlignment="Stretch"
+                                           ItemsSource="{Binding AuthMethods}"
+                                           SelectedItem="{Binding SelectedAuthMethod}"/>
+
+                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Client ID"
+                                           FontSize="12" Foreground="#6E6E73"
+                                           VerticalAlignment="Center" Margin="0,0,12,10"/>
+                                <TextBox   Grid.Row="3" Grid.Column="1" Margin="0,0,0,10"
+                                           Text="{Binding ClientId}"
+                                           FontSize="12"
+                                           PlaceholderText="Azure AD App Client ID"/>
+
+                                <TextBlock Grid.Row="4" Grid.Column="0" Text="Tenant ID"
+                                           FontSize="12" Foreground="#6E6E73"
+                                           VerticalAlignment="Center" Margin="0,0,12,10"/>
+                                <TextBox   Grid.Row="4" Grid.Column="1" Margin="0,0,0,10"
+                                           Text="{Binding TenantId}"
+                                           FontSize="12"
+                                           PlaceholderText="Optional — leave blank for common endpoint"/>
+
+                                <!-- Certificate file (Certificate auth only) -->
+                                <TextBlock Grid.Row="5" Grid.Column="0" Text="Certificate"
+                                           FontSize="13" Foreground="#3C3C43"
+                                           VerticalAlignment="Center" Margin="0,0,12,10"
+                                           IsVisible="{Binding IsCertificateVisible}"/>
+                                <Grid      Grid.Row="5" Grid.Column="1" Margin="0,0,0,10"
+                                           ColumnDefinitions="*,Auto"
+                                           IsVisible="{Binding IsCertificateVisible}">
+                                    <TextBox Grid.Column="0"
+                                             Text="{Binding CertificatePath}"
+                                             FontSize="12"
+                                             PlaceholderText="Path to .pfx / .p12 file"/>
+                                    <Button  Grid.Column="1"
+                                             Content="Browse…"
+                                             Command="{Binding BrowseCertificateCommand}"
+                                             Margin="8,0,0,0"/>
+                                </Grid>
+
+                                <!-- Secret / password (Client secret value or Certificate password) -->
+                                <TextBlock Grid.Row="6" Grid.Column="0" Text="{Binding SecretLabel}"
+                                           FontSize="13" Foreground="#3C3C43"
+                                           VerticalAlignment="Center" Margin="0,0,12,10"
+                                           IsVisible="{Binding IsSecretVisible}"/>
+                                <TextBox   Grid.Row="6" Grid.Column="1" Margin="0,0,0,10"
+                                           Text="{Binding ClientSecret}"
+                                           PasswordChar="•"
+                                           PlaceholderText="{Binding SecretLabel}"
+                                           IsVisible="{Binding IsSecretVisible}"/>
+
+                                <!-- Folder (sidebar grouping) -->
+                                <TextBlock Grid.Row="7" Grid.Column="0" Text="Folder"
+                                           FontSize="12" Foreground="#6E6E73"
+                                           VerticalAlignment="Center" Margin="0,0,12,10"/>
+                                <TextBox   Grid.Row="7" Grid.Column="1" Margin="0,0,0,10"
+                                           Text="{Binding Folder}"
+                                           FontSize="12"
+                                           PlaceholderText="Optional — e.g. a client name"/>
+
+                                <!-- Status message row -->
+                                <Border Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="2"
+                                        CornerRadius="8" Padding="12,8" Margin="0,4,0,0"
+                                        Background="#F2F2F7"
+                                        IsVisible="{Binding StatusMessage,
+                                            Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                    <TextBlock Text="{Binding StatusMessage}"
+                                               FontSize="12"
+                                               Foreground="#3C3C43"
+                                               TextWrapping="Wrap"/>
+                                </Border>
+                            </Grid>
+
+                            <!-- Thin divider -->
+                            <Rectangle Height="1" Fill="#E5E5EA" Margin="-28,0"/>
+
+                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                <!-- Destructive action on the left, macOS sheet style -->
+                                <Button Grid.Column="0"
+                                        Classes="Danger"
+                                        Content="Delete"
+                                        Command="{Binding DeleteProfileCommand}"
+                                        IsVisible="{Binding IsEditing}"
+                                        ToolTip.Tip="Remove this connection profile"/>
+
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                                    <Button Content="Stop"
+                                            Classes="Danger"
+                                            Command="{Binding CancelConnectCommand}"
+                                            IsVisible="{Binding IsConnecting}"/>
+                                    <Button Content="Re-authenticate"
+                                            Command="{Binding ReauthenticateCommand}"
+                                            IsVisible="{Binding ShowReauthenticate}"
+                                            ToolTip.Tip="Sign in again to re-establish this connection (account picker)"/>
+                                    <Button Content="Save"
+                                            Command="{Binding SaveProfileCommand}"
+                                            IsVisible="{Binding !IsConnecting}"
+                                            ToolTip.Tip="Save changes without connecting"/>
+                                    <Button Content="Connect"
+                                            Classes="Primary"
+                                            Command="{Binding ConnectCommand}"
+                                            IsVisible="{Binding !IsConnecting}"/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </Panel>
+
+                <!-- ── Settings overlay ────────────────────────────────
+                     Dim backdrop + modal sheet, same pattern as the
+                     connection form. -->
+                <Panel IsVisible="{Binding IsSettingsPanelVisible}" ZIndex="60">
+
+                    <Border Classes="FormCard"
+                            Width="420"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center">
+                        <StackPanel Spacing="0" TextElement.Foreground="#1C1C1E">
+
+                            <!-- Header row -->
+                            <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,16">
+                                <TextBlock Grid.Column="0"
+                                           Text="Settings"
+                                           FontSize="17"
+                                           FontWeight="SemiBold"
+                                           Foreground="#1C1C1E"
+                                           VerticalAlignment="Center"/>
+                                <Button Grid.Column="1"
+                                        Classes="IconBtn"
+                                        Command="{Binding ToggleSettingsPanelCommand}"
+                                        ToolTip.Tip="Close">
+                                    <TextBlock Text="✕" FontSize="14" Foreground="#8E8E93"/>
+                                </Button>
+                            </Grid>
+
+                            <Rectangle Height="1" Fill="#E5E5EA" Margin="-28,0"/>
+
+                            <!-- About — centred, macOS About-box style -->
+                            <StackPanel Spacing="3" Margin="0,20,0,20"
+                                        HorizontalAlignment="Center">
+                                <TextBlock Text="VerseKit"
+                                           FontSize="16" FontWeight="SemiBold"
+                                           HorizontalAlignment="Center"/>
+                                <TextBlock Text="A macOS toolkit for Microsoft Dataverse administrators."
+                                           FontSize="12" Foreground="#6E6E73"
+                                           HorizontalAlignment="Center"
+                                           TextAlignment="Center"
+                                           TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding AppVersion}"
+                                           FontSize="12" Foreground="#6E6E73"
+                                           HorizontalAlignment="Center"/>
+                                <TextBlock Text="VerseKit is not affiliated with, endorsed by, or sponsored by Microsoft or XrmToolBox."
+                                           FontSize="11" Foreground="#8E8E93"
+                                           HorizontalAlignment="Center"
+                                           TextAlignment="Center"
+                                           TextWrapping="Wrap"
+                                           MaxWidth="340"
+                                           Margin="0,4,0,0"/>
+                                <Button Content="View project on GitHub"
+                                        Command="{Binding OpenGitHubCommand}"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        Padding="4,2"
+                                        Margin="0,6,0,0"
+                                        FontSize="12"
+                                        Foreground="#0066D6"
+                                        HorizontalAlignment="Center"/>
+                            </StackPanel>
+
+                            <Rectangle Height="1" Fill="#E5E5EA" Margin="-28,0"/>
+
+                            <!-- Updates -->
+                            <StackPanel Spacing="10" Margin="0,16,0,0">
+                                <TextBlock Text="SOFTWARE UPDATE"
+                                           FontSize="11" FontWeight="SemiBold"
+                                           Foreground="#6E6E73" LetterSpacing="0.6"/>
+
+                                <TextBlock Text="{Binding UpdateStatus}"
+                                           FontSize="13"
+                                           Foreground="#3C3C43"
+                                           TextWrapping="Wrap"
+                                           IsVisible="{Binding UpdateStatus,
+                                               Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                                <ProgressBar Value="{Binding DownloadProgress}"
+                                             Minimum="0" Maximum="1"
+                                             Height="4"
+                                             IsVisible="{Binding IsDownloadingUpdate}"/>
+
+                                <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
+                                    <Button Grid.Column="0"
+                                            Content="Check for Updates"
+                                            Command="{Binding CheckUpdatesCommand}"
+                                            HorizontalAlignment="Left"/>
+                                    <Button Grid.Column="1"
+                                            Content="Install Update"
+                                            Classes="Primary"
+                                            Command="{Binding DownloadUpdateCommand}"
+                                            IsVisible="{Binding IsUpdateAvailable}"/>
+                                </Grid>
+                            </StackPanel>
+
+                        </StackPanel>
+                    </Border>
+                </Panel>
+
+            </Panel>
+        </Grid>
+    </Grid>
+</Window>

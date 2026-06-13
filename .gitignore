@@ -1,0 +1,42 @@
+# .NET build outputs
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.idea/
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+project.lock.json
+
+# Logs
+*.log
+logs/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+Icon
+
+# Rider / JetBrains
+.idea/
+
+# VS Code
+.vscode/
+
+# Published output
+publish/
+
+# Assembled .app bundles
+dist/
+
+# User secrets — never committed
+appsettings.Development.json
+secrets.json

@@ -1,0 +1,334 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:WebResourcesManager.ViewModels"
+             xmlns:models="using:WebResourcesManager.Models"
+             xmlns:ae="using:AvaloniaEdit"
+             x:Class="WebResourcesManager.Views.WebResourcesView"
+             x:DataType="vm:WebResourcesViewModel">
+
+    <Grid RowDefinitions="Auto,Auto,*">
+
+        <!-- ══ Row 0 — Solution toolbar ══════════════════════════════
+             ZIndex=1 so the toolbar (and its button shadows) paint over
+             the filter row below, instead of being covered by it. -->
+        <Border Grid.Row="0"
+                ZIndex="1"
+                Background="#F8F8FA"
+                BorderBrush="#E5E5EA"
+                BorderThickness="0,0,0,1"
+                Padding="16,10">
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+
+                <TextBlock Grid.Column="0"
+                           Text="Solution"
+                           FontWeight="SemiBold"
+                           FontSize="13"
+                           Foreground="#1C1C1E"
+                           VerticalAlignment="Center"
+                           Margin="0,0,10,0"/>
+
+                <ComboBox Grid.Column="1"
+                          ItemsSource="{Binding Solutions}"
+                          SelectedItem="{Binding SelectedSolution}"
+                          HorizontalAlignment="Stretch"
+                          PlaceholderText="Connect to an environment first…">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="models:SolutionItem">
+                            <TextBlock Text="{Binding DisplayLabel}"
+                                       FontSize="13"
+                                       Foreground="#1C1C1E"/>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+
+                <Button Grid.Column="2"
+                        Classes="Primary"
+                        Content="Load Resources"
+                        Command="{Binding LoadCommand}"
+                        IsEnabled="{Binding SelectedSolution,
+                            Converter={x:Static ObjectConverters.IsNotNull}}"
+                        Margin="10,0,0,0"/>
+
+                <Button Grid.Column="3"
+                        Content="＋ New"
+                        Command="{Binding CreateWebResourceCommand}"
+                        ToolTip.Tip="Create a new web resource in the selected solution"
+                        Margin="8,0,0,0"/>
+            </Grid>
+        </Border>
+
+        <!-- ══ Row 1 — Filter + status bar ═══════════════════════════ -->
+        <Border Grid.Row="1"
+                Background="White"
+                BorderBrush="#E5E5EA"
+                BorderThickness="0,0,0,1"
+                Padding="12,7">
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                    <TextBox PlaceholderText="Filter by name…"
+                             Text="{Binding FilterText}"
+                             Width="240"/>
+                    <Button Content="Load 5,000 more"
+                            Command="{Binding LoadMoreCommand}"
+                            IsVisible="{Binding HasMoreResults}"
+                            FontSize="12"
+                            Padding="10,5"/>
+                </StackPanel>
+                <TextBlock Grid.Column="1"
+                           Text="{Binding StatusMessage}"
+                           VerticalAlignment="Center"
+                           Foreground="#636366"
+                           FontSize="12"
+                           Margin="12,0,0,0"/>
+            </Grid>
+        </Border>
+
+        <!-- ══ Row 2 — Main split panel ══════════════════════════════ -->
+        <Grid Grid.Row="2" ColumnDefinitions="260,1,*">
+
+            <!-- ── Left column: resource list ─────────────────────── -->
+            <DockPanel Grid.Column="0" Background="White">
+
+                <!-- Loading indicator -->
+                <ProgressBar DockPanel.Dock="Top"
+                             IsIndeterminate="True"
+                             IsVisible="{Binding IsLoading}"
+                             Height="2" Margin="0"/>
+
+                <!-- Resource tree: solution groups when All Solutions is
+                     loaded, flat resource rows otherwise -->
+                <TreeView ItemsSource="{Binding ResourceTree}"
+                          SelectedItem="{Binding SelectedNode}"
+                          Background="Transparent"
+                          BorderThickness="0"
+                          Padding="6,4">
+                    <TreeView.DataTemplates>
+
+                        <!-- Solution group node -->
+                        <TreeDataTemplate DataType="models:SolutionGroup"
+                                          ItemsSource="{Binding Items}"
+                                          x:DataType="models:SolutionGroup">
+                            <TextBlock Text="{Binding DisplayName}"
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       Foreground="#3C3C43"
+                                       TextTrimming="CharacterEllipsis"/>
+                        </TreeDataTemplate>
+
+                        <!-- Web resource leaf -->
+                        <DataTemplate DataType="models:WebResourceItem"
+                                      x:DataType="models:WebResourceItem">
+                            <Grid ColumnDefinitions="36,*" Margin="0,1">
+                                <Border Grid.Column="0"
+                                        Background="{Binding TypeColor}"
+                                        CornerRadius="5"
+                                        Padding="3,2"
+                                        Width="32"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding TypeBadge}"
+                                               FontSize="9"
+                                               FontWeight="Bold"
+                                               Foreground="White"
+                                               HorizontalAlignment="Center"/>
+                                </Border>
+                                <StackPanel Grid.Column="1"
+                                            Spacing="1"
+                                            VerticalAlignment="Center"
+                                            Margin="6,0,0,0">
+                                    <TextBlock Text="{Binding ShortName}"
+                                               FontSize="12"
+                                               FontWeight="Medium"
+                                               Foreground="#1C1C1E"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding FolderPath}"
+                                               FontSize="10"
+                                               Foreground="#8E8E93"
+                                               TextTrimming="CharacterEllipsis"
+                                               IsVisible="{Binding HasFolder}"/>
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </TreeView.DataTemplates>
+
+                    <TreeView.Styles>
+                        <Style Selector="TreeViewItem">
+                            <Setter Property="IsExpanded" Value="True"/>
+                            <Setter Property="Padding" Value="4,3"/>
+                            <Setter Property="CornerRadius" Value="8"/>
+                        </Style>
+                        <Style Selector="TreeViewItem:pointerover /template/ Border#PART_LayoutRoot">
+                            <Setter Property="Background" Value="#0F000000"/>
+                            <Setter Property="CornerRadius" Value="8"/>
+                        </Style>
+                        <Style Selector="TreeViewItem:selected /template/ Border#PART_LayoutRoot">
+                            <Setter Property="Background" Value="{StaticResource TintBrush}"/>
+                            <Setter Property="CornerRadius" Value="8"/>
+                        </Style>
+                    </TreeView.Styles>
+                </TreeView>
+            </DockPanel>
+
+            <!-- Divider -->
+            <Rectangle Grid.Column="1" Fill="#E5E5EA"/>
+
+            <!-- ── Right column: editor pane ──────────────────────── -->
+            <Grid Grid.Column="2" RowDefinitions="Auto,*,Auto" Background="White">
+
+                <!-- Empty state -->
+                <StackPanel Grid.Row="0" Grid.RowSpan="3"
+                            IsVisible="{Binding IsNothingSelected}"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Spacing="8">
+                    <TextBlock Text="Select a resource to edit"
+                               FontSize="16" FontWeight="Light"
+                               Foreground="#8E8E93"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="Use the list on the left to choose a web resource."
+                               FontSize="13"
+                               Foreground="#AEAEB2"
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- ── Resource header (when something selected) ───── -->
+                <Border Grid.Row="0"
+                        IsVisible="{Binding IsEditorVisible}"
+                        Background="#F8F8FA"
+                        BorderBrush="#E5E5EA"
+                        BorderThickness="0,0,0,1"
+                        Padding="16,10">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Grid.Column="0" Spacing="2">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock Text="{Binding SelectedResource.Name}"
+                                           FontSize="13"
+                                           FontWeight="SemiBold"
+                                           Foreground="#1C1C1E"
+                                           TextTrimming="CharacterEllipsis"/>
+                                <!-- Dirty indicator -->
+                                <Border Background="#FF9500"
+                                        CornerRadius="5"
+                                        Padding="4,1"
+                                        IsVisible="{Binding IsDirty}"
+                                        VerticalAlignment="Center">
+                                    <TextBlock Text="UNSAVED"
+                                               FontSize="9"
+                                               FontWeight="Bold"
+                                               Foreground="White"/>
+                                </Border>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <TextBlock Text="{Binding SelectedResource.TypeLabel}"
+                                           FontSize="11" Foreground="#636366"/>
+                                <TextBlock Text="{Binding SelectedResource.ModifiedOnDisplay}"
+                                           FontSize="11" Foreground="#AEAEB2"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Content loading indicator -->
+                        <ProgressBar Grid.Column="1"
+                                     IsIndeterminate="True"
+                                     IsVisible="{Binding IsEditorLoading}"
+                                     Width="80" Height="3"
+                                     VerticalAlignment="Center"/>
+                    </Grid>
+                </Border>
+
+                <!-- ── Editor area ───────────────────────────────── -->
+                <Panel Grid.Row="1" IsVisible="{Binding IsEditorVisible}">
+
+                    <!-- Code editor (AvaloniaEdit + TextMate highlighting) -->
+                    <ae:TextEditor x:Name="CodeEditor"
+                                   IsVisible="{Binding IsTextResource}"
+                                   FontFamily="Cascadia Code,SF Mono,Menlo,Courier New,monospace"
+                                   FontSize="13"
+                                   Background="White"
+                                   Foreground="#1C1C1E"
+                                   ShowLineNumbers="True"
+                                   WordWrap="False"
+                                   HorizontalScrollBarVisibility="Auto"
+                                   VerticalScrollBarVisibility="Auto"
+                                   Padding="8,8,0,0"/>
+
+                    <!-- Binary resource message -->
+                    <StackPanel IsVisible="{Binding IsBinaryResource}"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Spacing="8">
+                        <TextBlock Text="Binary resource"
+                                   FontSize="16" FontWeight="Light"
+                                   Foreground="#8E8E93"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock Text="{Binding SelectedResource.TypeLabel}"
+                                   FontSize="13" Foreground="#AEAEB2"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock Text="Download / upload support coming soon."
+                                   FontSize="12" Foreground="#C7C7CC"
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
+
+                </Panel>
+
+                <!-- ── Action bar ────────────────────────────────── -->
+                <Border Grid.Row="2"
+                        IsVisible="{Binding IsEditorVisible}"
+                        Background="#F8F8FA"
+                        BorderBrush="#E5E5EA"
+                        BorderThickness="0,1,0,0"
+                        Padding="12,8">
+
+                    <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto">
+
+                        <Button Grid.Column="0"
+                                Classes="Primary"
+                                Content="Save"
+                                Command="{Binding SaveResourceCommand}"
+                                IsEnabled="{Binding IsDirty}"
+                                Margin="0,0,8,0"/>
+
+                        <Button Grid.Column="1"
+                                Classes="Success"
+                                Content="Publish"
+                                Command="{Binding PublishResourceCommand}"
+                                Margin="0,0,8,0"/>
+
+                        <Button Grid.Column="2"
+                                Content="Check Syntax"
+                                Command="{Binding CheckSyntaxCommand}"
+                                IsVisible="{Binding IsScriptResource}"
+                                Margin="0,0,8,0"/>
+
+                        <Button Grid.Column="3"
+                                Classes="Danger"
+                                Content="Delete"
+                                Command="{Binding DeleteResourceCommand}"
+                                ToolTip.Tip="Delete this web resource from the environment"/>
+
+                        <TextBlock Grid.Column="4"
+                                   Text="{Binding EditorStatus}"
+                                   FontSize="12"
+                                   Foreground="#636366"
+                                   VerticalAlignment="Center"
+                                   Margin="14,0,0,0"
+                                   TextTrimming="CharacterEllipsis"/>
+
+                        <!-- Managed badge -->
+                        <Border Grid.Column="5"
+                                Background="#FF3B30"
+                                CornerRadius="5"
+                                Padding="6,3"
+                                IsVisible="{Binding SelectedResource.IsManaged}"
+                                VerticalAlignment="Center">
+                            <TextBlock Text="MANAGED"
+                                       FontSize="9"
+                                       FontWeight="Bold"
+                                       Foreground="White"/>
+                        </Border>
+                    </Grid>
+                </Border>
+
+            </Grid>
+        </Grid>
+    </Grid>
+</UserControl>
