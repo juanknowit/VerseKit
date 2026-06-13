@@ -11,7 +11,7 @@ dotnet build "$BASE/VerseKit.slnx" -c Debug --nologo -v q
 
 echo ""
 echo "==> Installing plugins..."
-for plugin in WebResourcesManager MetadataBrowser; do
+for plugin in ResourceManager TableBrowser; do
     PLUGIN_SRC="$BASE/plugins/$plugin/bin/Debug/net10.0"
     PLUGIN_DST="$PLUGIN_INSTALL/$plugin"
     mkdir -p "$PLUGIN_DST"

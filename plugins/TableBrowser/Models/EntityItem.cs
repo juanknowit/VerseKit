@@ -1,4 +1,4 @@
-namespace MetadataBrowser.Models;
+namespace TableBrowser.Models;
 
 /// <summary>A Dataverse table (entity) in the browser list.</summary>
 public sealed class EntityItem

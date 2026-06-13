@@ -12,12 +12,12 @@ Process: VerseKit.App
 │     VerseKit.Core
 │     VerseKit.PluginSdk  ← shared, not duplicated
 │
-├── PluginLoadContext: "WebResourcesManager"
-│     WebResourcesManager.dll
+├── PluginLoadContext: "ResourceManager"
+│     ResourceManager.dll
 │     (plugin's own dependencies, isolated)
 │
-└── PluginLoadContext: "MetadataBrowser"
-      MetadataBrowser.dll
+└── PluginLoadContext: "TableBrowser"
+      TableBrowser.dll
       (may have different version of a shared library — fine)
 ```
 

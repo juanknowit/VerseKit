@@ -1,4 +1,4 @@
-namespace WebResourcesManager.Models;
+namespace ResourceManager.Models;
 
 public enum WebResourceType
 {

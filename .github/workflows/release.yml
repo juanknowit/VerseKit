@@ -34,17 +34,17 @@ jobs:
       # and bundled by scripts/bundle-app.sh — no generation step needed.
 
       # ── Build plugins (arch-independent .NET DLLs) ─────────────────
-      - name: Publish WebResourcesManager plugin
+      - name: Publish Resource Manager plugin
         run: |
-          dotnet publish plugins/WebResourcesManager \
+          dotnet publish plugins/ResourceManager \
             --self-contained false \
-            -c Release -o publish/plugins/WebResourcesManager
+            -c Release -o publish/plugins/ResourceManager
 
-      - name: Publish MetadataBrowser plugin
+      - name: Publish Table Browser plugin
         run: |
-          dotnet publish plugins/MetadataBrowser \
+          dotnet publish plugins/TableBrowser \
             --self-contained false \
-            -c Release -o publish/plugins/MetadataBrowser
+            -c Release -o publish/plugins/TableBrowser
 
       # ── Publish the host app ───────────────────────────────────────
       - name: Publish App (Apple Silicon — arm64)
@@ -66,7 +66,7 @@ jobs:
       # ── Bundle plugins into each publish folder ────────────────────
       - name: Stage plugins — arm64
         run: |
-          for p in WebResourcesManager MetadataBrowser; do
+          for p in ResourceManager TableBrowser; do
             DST="publish/osx-arm64/plugins/$p"
             mkdir -p "$DST"
             cp -r "publish/plugins/$p/." "$DST/"
@@ -74,7 +74,7 @@ jobs:
 
       - name: Stage plugins — x64
         run: |
-          for p in WebResourcesManager MetadataBrowser; do
+          for p in ResourceManager TableBrowser; do
             DST="publish/osx-x64/plugins/$p"
             mkdir -p "$DST"
             cp -r "publish/plugins/$p/." "$DST/"

@@ -1,4 +1,4 @@
-namespace MetadataBrowser.Models;
+namespace TableBrowser.Models;
 
 /// <summary>A column (attribute) of a Dataverse table.</summary>
 public sealed class AttributeItem

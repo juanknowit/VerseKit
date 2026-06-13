@@ -7,10 +7,10 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.PowerPlatform.Dataverse.Client;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
-using WebResourcesManager.Models;
+using ResourceManager.Models;
 using VerseKit.PluginSdk;
 
-namespace WebResourcesManager.ViewModels;
+namespace ResourceManager.ViewModels;
 
 public sealed partial class WebResourcesViewModel : ObservableObject
 {

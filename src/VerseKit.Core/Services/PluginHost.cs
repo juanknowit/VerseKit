@@ -36,7 +36,7 @@ public sealed class PluginHost(ILogger<PluginHost> logger) : IDisposable
         {
             ct.ThrowIfCancellationRequested();
 
-            // Convention: the plugin DLL matches the folder name (e.g. WebResourcesManager/WebResourcesManager.dll).
+            // Convention: the plugin DLL matches the folder name (e.g. ResourceManager/ResourceManager.dll).
             // Loading every DLL in the folder would pull in hundreds of framework assemblies unnecessarily.
             var folderName = Path.GetFileName(subdir);
             var candidate = Path.Combine(subdir, $"{folderName}.dll");

@@ -5,12 +5,12 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.PowerPlatform.Dataverse.Client;
 using Microsoft.Xrm.Sdk.Messages;
 using Microsoft.Xrm.Sdk.Metadata;
-using MetadataBrowser.Models;
+using TableBrowser.Models;
 using VerseKit.PluginSdk;
 
-namespace MetadataBrowser.ViewModels;
+namespace TableBrowser.ViewModels;
 
-public sealed partial class MetadataBrowserViewModel : ObservableObject
+public sealed partial class TableBrowserViewModel : ObservableObject
 {
     private readonly IConnectionProvider _connectionProvider;
 
@@ -33,7 +33,7 @@ public sealed partial class MetadataBrowserViewModel : ObservableObject
 
     public bool IsEntitySelected => SelectedEntity is not null;
 
-    public MetadataBrowserViewModel(IConnectionProvider connectionProvider)
+    public TableBrowserViewModel(IConnectionProvider connectionProvider)
     {
         _connectionProvider = connectionProvider;
         _connectionProvider.ConnectionChanged.Subscribe(client =>

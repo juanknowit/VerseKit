@@ -6,7 +6,7 @@ VerseKit is a native desktop plugin host for tools that administer Microsoft Dyn
 
 VerseKit is not affiliated with, endorsed by, or sponsored by Microsoft or XrmToolBox.
 
-> **Status:** Early but functional. The shell, connection management, Metadata Browser, and Web Resources Manager plugins are present. Release builds are ad-hoc signed but not yet notarized (see [Installing a Release](#installing-a-release)).
+> **Status:** Early but functional. The shell, connection management, Table Browser, and Resource Manager plugins are present. Release builds are ad-hoc signed but not yet notarized (see [Installing a Release](#installing-a-release)).
 
 ## Technology Stack
 
@@ -31,8 +31,8 @@ VerseKit/
 │   ├── VerseKit.Core/         # connection, plugin host, services
 │   └── VerseKit.PluginSdk/    # plugin contract
 ├── plugins/
-│   ├── MetadataBrowser/
-│   └── WebResourcesManager/
+│   ├── ResourceManager/
+│   └── TableBrowser/
 ├── docs/
 └── scripts/
 ```

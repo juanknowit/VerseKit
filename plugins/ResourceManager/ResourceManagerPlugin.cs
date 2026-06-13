@@ -1,18 +1,18 @@
 using Avalonia.Controls;
 using VerseKit.PluginSdk;
-using WebResourcesManager.Views;
-using WebResourcesManager.ViewModels;
+using ResourceManager.Views;
+using ResourceManager.ViewModels;
 
-namespace WebResourcesManager;
+namespace ResourceManager;
 
 /// <summary>
 /// Plugin that lists and manages Dynamics 365 web resources.
 /// Ported concept from https://github.com/MscrmTools/MsCrmTools.WebResourcesManager
 /// </summary>
-public sealed class WebResourcesManagerPlugin : IVerseKitPlugin
+public sealed class ResourceManagerPlugin : IVerseKitPlugin
 {
     public Guid PluginId => new("a1b2c3d4-e5f6-7890-abcd-ef1234567890");
-    public string Name => "Web Resources Manager";
+    public string Name => "Resource Manager";
     public string Description => "View, create, and update web resources in your Dynamics 365 environment";
     public string Version => "0.1.0";
 

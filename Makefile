@@ -1,6 +1,6 @@
 PLUGIN_DIR   := $(HOME)/.local/share/versekit/plugins
 APP_PROJECT  := src/VerseKit.App
-WRM_PROJECT  := plugins/WebResourcesManager
+PLUGINS      := ResourceManager TableBrowser
 VERSION      := $(shell grep '<Version>' $(APP_PROJECT)/VerseKit.App.csproj | grep -o '[0-9][^<]*')
 
 .PHONY: run build install-plugins icon bundle clean list-plugins
@@ -15,8 +15,10 @@ build:
 
 ## Copy plugin build outputs to the user plugin directory
 install-plugins: build
-	mkdir -p $(PLUGIN_DIR)/WebResourcesManager
-	cp -r $(WRM_PROJECT)/bin/Debug/net10.0/. $(PLUGIN_DIR)/WebResourcesManager/
+	@for p in $(PLUGINS); do \
+		mkdir -p "$(PLUGIN_DIR)/$$p"; \
+		cp -r "plugins/$$p/bin/Debug/net10.0/." "$(PLUGIN_DIR)/$$p/"; \
+	done
 	@echo "Installed plugins to $(PLUGIN_DIR)"
 
 ## Generate AppIcon-1024.png + AppIcon.icns
@@ -33,12 +35,13 @@ bundle: icon
 		-c Release \
 		-p:Version=$(VERSION) \
 		-o publish/osx-arm64
-	dotnet publish $(WRM_PROJECT) \
-		--self-contained false \
-		-c Release -o publish/plugins/WebResourcesManager
-	mkdir -p publish/osx-arm64/plugins/WebResourcesManager
-	cp -r publish/plugins/WebResourcesManager/. \
-	      publish/osx-arm64/plugins/WebResourcesManager/
+	@for p in $(PLUGINS); do \
+		dotnet publish "plugins/$$p" \
+			--self-contained false \
+			-c Release -o "publish/plugins/$$p"; \
+		mkdir -p "publish/osx-arm64/plugins/$$p"; \
+		cp -r "publish/plugins/$$p/." "publish/osx-arm64/plugins/$$p/"; \
+	done
 	bash scripts/bundle-app.sh publish/osx-arm64 $(VERSION) dist
 	@echo ""
 	@echo "Bundle ready: dist/VerseKit.app"

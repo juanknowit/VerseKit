@@ -6,10 +6,10 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using AvaloniaEdit.TextMate;
 using TextMateSharp.Grammars;
-using WebResourcesManager.Models;
-using WebResourcesManager.ViewModels;
+using ResourceManager.Models;
+using ResourceManager.ViewModels;
 
-namespace WebResourcesManager.Views;
+namespace ResourceManager.Views;
 
 public partial class WebResourcesView : UserControl
 {

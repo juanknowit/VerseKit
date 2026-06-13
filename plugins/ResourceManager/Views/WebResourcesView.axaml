@@ -1,9 +1,9 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:WebResourcesManager.ViewModels"
-             xmlns:models="using:WebResourcesManager.Models"
+             xmlns:vm="using:ResourceManager.ViewModels"
+             xmlns:models="using:ResourceManager.Models"
              xmlns:ae="using:AvaloniaEdit"
-             x:Class="WebResourcesManager.Views.WebResourcesView"
+             x:Class="ResourceManager.Views.WebResourcesView"
              x:DataType="vm:WebResourcesViewModel">
 
     <Grid RowDefinitions="Auto,Auto,*">

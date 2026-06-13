@@ -1,4 +1,4 @@
-namespace WebResourcesManager.Models;
+namespace ResourceManager.Models;
 
 /// <summary>A solution node in the resource tree, holding the (filtered)
 /// web resources that belong to it.</summary>
