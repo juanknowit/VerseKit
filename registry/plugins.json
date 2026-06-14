@@ -8,7 +8,7 @@
       "version": "0.1.0",
       "author": "VerseKit",
       "downloadUrl": "https://github.com/juanknowit/VerseKit/releases/download/plugins-v1/ResourceManager.zip",
-      "sha256": null
+      "sha256": "413adc2cef3dd9865ad4cb8b1ae4839ce0420f2aa6dfb07ab1b9e76b43d5d8a0"
     },
     {
       "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
@@ -17,7 +17,7 @@
       "version": "0.1.0",
       "author": "VerseKit",
       "downloadUrl": "https://github.com/juanknowit/VerseKit/releases/download/plugins-v1/TableBrowser.zip",
-      "sha256": null
+      "sha256": "d4f14b3c3517ac79c89d3e1ac3e670c13cfe1aa2e62e687f002c9620d047f75e"
     },
     {
       "id": "c3d4e5f6-a7b8-9012-cdef-345678901234",
@@ -26,7 +26,7 @@
       "version": "0.1.0",
       "author": "VerseKit",
       "downloadUrl": "https://github.com/juanknowit/VerseKit/releases/download/plugins-v1/SecurityRoles.zip",
-      "sha256": null
+      "sha256": "e137b5bd22c438cfa4ffd6b47ed64d873b7a801a777975d1ac35781437450b8e"
     }
   ]
 }
