@@ -27,6 +27,15 @@
       "author": "VerseKit",
       "downloadUrl": "https://github.com/juanknowit/VerseKit/releases/download/plugins-v2/SecurityRoles.zip",
       "sha256": "30c3f5c17f8d599413b1589a5947c3ed93ec474d525364f31ba7ad9b36110ef8"
+    },
+    {
+      "id": "d4e5f6a7-b8c9-0123-defa-456789012345",
+      "name": "Access Checker",
+      "description": "See a user's effective table privileges across all their roles and teams — read only.",
+      "version": "1.0.0",
+      "author": "VerseKit",
+      "downloadUrl": "https://github.com/juanknowit/VerseKit/releases/download/plugins-v3/AccessChecker.zip",
+      "sha256": "88534ad149ad0e75285bb3bcc47f86ea4c06ac47d32d091bafd3855029fdb079"
     }
   ]
 }
