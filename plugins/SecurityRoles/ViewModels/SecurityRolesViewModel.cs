@@ -404,6 +404,11 @@ public sealed partial class SecurityRolesViewModel : ObservableObject
 
     // ── Export to Excel ────────────────────────────────────────────────
 
+    /// <summary>Exports whichever detail tab is currently open.</summary>
+    [RelayCommand]
+    private Task ExportAsync() =>
+        DetailTabIndex == 1 ? ExportPrivilegesAsync() : ExportMembersAsync();
+
     [RelayCommand]
     private async Task ExportMembersAsync()
     {
