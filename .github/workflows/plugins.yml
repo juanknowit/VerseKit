@@ -1,0 +1,54 @@
+name: Publish Plugins
+
+# Packages each plugin as a zip (PluginName/PluginName.dll + deps) and a .sha256
+# sidecar, and attaches them to a GitHub release. Trigger by pushing a tag like
+# "plugins-v1". The registry (registry/plugins.json) points at these assets.
+on:
+  push:
+    tags:
+      - 'plugins-v*'
+
+jobs:
+  package:
+    name: Package & Publish Plugins
+    runs-on: macos-latest
+
+    permissions:
+      contents: write  # create the GitHub Release
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore VerseKit.slnx
+
+      - name: Package plugins
+        run: |
+          mkdir -p staging
+          for p in ResourceManager TableBrowser SecurityRoles; do
+            # Framework-dependent: the host shares Avalonia/Dataverse via its ALC.
+            dotnet publish "plugins/$p" --self-contained false -c Release -o "out/$p"
+            # Zip with the plugin folder as the top entry → extracts to <p>/<p>.dll
+            ( cd out && zip -r --symlinks "../staging/$p.zip" "$p" )
+            ( cd staging && shasum -a 256 "$p.zip" | awk '{print $1}' > "$p.zip.sha256" )
+          done
+          echo "---- checksums (paste into registry/plugins.json) ----"
+          for f in staging/*.zip.sha256; do echo "$(basename "$f" .zip.sha256): $(cat "$f")"; done
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "VerseKit Plugins ${{ github.ref_name }}"
+          tag_name: ${{ github.ref_name }}
+          body: |
+            Installable VerseKit plugins. These are downloaded by the in-app
+            plugin manager (Tools → Manage → Available) via `registry/plugins.json`.
+          files: |
+            staging/*.zip
+            staging/*.zip.sha256

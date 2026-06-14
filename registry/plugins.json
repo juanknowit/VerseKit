@@ -1,0 +1,32 @@
+{
+  "$comment": "VerseKit plugin registry. Each plugin is published as a zip (PluginName/PluginName.dll + deps) on a 'plugins-v*' GitHub release. The app reads this from the raw URL on the default branch. Fill in sha256 after publishing the release.",
+  "plugins": [
+    {
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Resource Manager",
+      "description": "View, create, and update web resources in your Dynamics 365 environment.",
+      "version": "0.1.0",
+      "author": "VerseKit",
+      "downloadUrl": "https://github.com/juanknowit/VerseKit/releases/download/plugins-v1/ResourceManager.zip",
+      "sha256": null
+    },
+    {
+      "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+      "name": "Table Browser",
+      "description": "Browse tables (entities) and their columns (attributes) — read only.",
+      "version": "0.1.0",
+      "author": "VerseKit",
+      "downloadUrl": "https://github.com/juanknowit/VerseKit/releases/download/plugins-v1/TableBrowser.zip",
+      "sha256": null
+    },
+    {
+      "id": "c3d4e5f6-a7b8-9012-cdef-345678901234",
+      "name": "Security Roles",
+      "description": "Browse security roles and see which users and teams are assigned to each — read only.",
+      "version": "0.1.0",
+      "author": "VerseKit",
+      "downloadUrl": "https://github.com/juanknowit/VerseKit/releases/download/plugins-v1/SecurityRoles.zip",
+      "sha256": null
+    }
+  ]
+}
