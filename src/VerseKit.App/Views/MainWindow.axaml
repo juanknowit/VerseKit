@@ -348,10 +348,6 @@
                                        FontSize="14"
                                        Foreground="#636366"
                                        HorizontalAlignment="Center"/>
-                            <TextBlock Text="Select a tool from the sidebar to get started."
-                                       FontSize="14"
-                                       Foreground="#636366"
-                                       HorizontalAlignment="Center"/>
                             <TextBlock Text="Connect to an environment first using the sidebar."
                                        FontSize="13"
                                        Foreground="#8E8E93"
