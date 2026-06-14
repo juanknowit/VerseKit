@@ -224,22 +224,21 @@
                             Classes="SidebarProfile"
                             Command="{Binding NewFolderCommand}">
                         <StackPanel Orientation="Horizontal" Spacing="7">
-                            <!-- Two-tone folder glyph (lighter back panel + tab,
-                                 darker front pocket) — modern Finder-style look.
-                                 Layout width kept at the 8px icon slot so
-                                 "New Folder" stays aligned with the "Add
-                                 Connection" + and the connection rows above. -->
-                            <Viewbox Width="8" Height="11" Stretch="Uniform"
-                                     VerticalAlignment="Center">
-                                <Canvas Width="16" Height="13">
-                                    <!-- Back panel + raised tab -->
-                                    <Path Fill="#B7B7BC"
-                                          Data="M2 2 H6.2 C6.55 2 6.88 2.16 7.1 2.44 L8 3.6 H14 C14.55 3.6 15 4.05 15 4.6 V10.4 C15 10.95 14.55 11.4 14 11.4 H2 C1.45 11.4 1 10.95 1 10.4 V3 C1 2.45 1.45 2 2 2 Z"/>
-                                    <!-- Front pocket -->
-                                    <Path Fill="#8E8E93"
-                                          Data="M1 6 H15 V10.4 C15 10.95 14.55 11.4 14 11.4 H2 C1.45 11.4 1 10.95 1 10.4 Z"/>
-                                </Canvas>
-                            </Viewbox>
+                            <!-- Thin outline folder, matching the weight of the "+"
+                                 above. The Panel keeps the layout width at the 8px
+                                 icon slot (so "New Folder" stays aligned with "Add
+                                 Connection" and the connection rows) while the glyph
+                                 renders a touch larger, centred and overflowing
+                                 symmetrically — the same way the + does. -->
+                            <Panel Width="8" VerticalAlignment="Center">
+                                <Viewbox Width="11" Height="8.5" HorizontalAlignment="Center">
+                                    <Canvas Width="16" Height="12.5">
+                                        <Path Stroke="#8E8E93" StrokeThickness="1.3"
+                                              StrokeJoin="Round" StrokeLineCap="Round"
+                                              Data="M1 2.6 C1 1.9 1.6 1.3 2.3 1.3 H6 C6.3 1.3 6.6 1.45 6.8 1.7 L7.7 2.8 H13.7 C14.4 2.8 15 3.4 15 4.1 V10 C15 10.7 14.4 11.3 13.7 11.3 H2.3 C1.6 11.3 1 10.7 1 10 Z"/>
+                                    </Canvas>
+                                </Viewbox>
+                            </Panel>
                             <TextBlock Text="New Folder" FontSize="13"
                                        Foreground="#8E8E93"
                                        VerticalAlignment="Center"/>
