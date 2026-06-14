@@ -351,7 +351,7 @@
                                        FontSize="13"
                                        Foreground="#8E8E93"
                                        HorizontalAlignment="Center"/>
-                            <TextBlock Text="VerseKit is not affiliated with, endorsed by, or sponsored by Microsoft or XrmToolBox."
+                            <TextBlock Text="VerseKit is not affiliated with, endorsed by, or sponsored by Microsoft."
                                        FontSize="11"
                                        Foreground="#8E8E93"
                                        HorizontalAlignment="Center"
@@ -585,7 +585,7 @@
                                 <TextBlock Text="{Binding AppVersion}"
                                            FontSize="12" Foreground="#6E6E73"
                                            HorizontalAlignment="Center"/>
-                                <TextBlock Text="VerseKit is not affiliated with, endorsed by, or sponsored by Microsoft or XrmToolBox."
+                                <TextBlock Text="VerseKit is not affiliated with, endorsed by, or sponsored by Microsoft."
                                            FontSize="11" Foreground="#8E8E93"
                                            HorizontalAlignment="Center"
                                            TextAlignment="Center"

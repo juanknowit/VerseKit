@@ -4,7 +4,7 @@ A macOS toolkit for Microsoft Dataverse administrators.
 
 VerseKit is a native desktop plugin host for tools that administer Microsoft Dynamics 365 and Power Platform Dataverse environments. It is built with .NET and Avalonia for macOS, with isolated plugin loading, cancellable Dataverse operations, and profile secrets stored in the macOS Keychain.
 
-VerseKit is not affiliated with, endorsed by, or sponsored by Microsoft or XrmToolBox.
+VerseKit is not affiliated with, endorsed by, or sponsored by Microsoft.
 
 > **Status:** Early but functional. The shell, connection management, Table Browser, Resource Manager, and Security Roles plugins are present. Release builds are ad-hoc signed but not yet notarized (see [Installing a Release](#installing-a-release)).
 
