@@ -14,7 +14,7 @@ public sealed class TableBrowserPlugin : IVerseKitPlugin
     public Guid PluginId => new("b2c3d4e5-f6a7-8901-bcde-f12345678901");
     public string Name => "Table Browser";
     public string Description => "Browse tables (entities) and their columns (attributes) — read only";
-    public string Version => "0.1.0";
+    public string Version => "1.0.0";
 
     private IConnectionProvider? _connectionProvider;
 

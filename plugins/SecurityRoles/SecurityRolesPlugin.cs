@@ -14,7 +14,7 @@ public sealed class SecurityRolesPlugin : IVerseKitPlugin
     public Guid PluginId => new("c3d4e5f6-a7b8-9012-cdef-345678901234");
     public string Name => "Security Roles";
     public string Description => "Browse security roles and see which users and teams are assigned to each — read only";
-    public string Version => "0.1.0";
+    public string Version => "1.0.0";
 
     private IConnectionProvider? _connectionProvider;
 

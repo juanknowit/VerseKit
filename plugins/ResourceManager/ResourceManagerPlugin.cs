@@ -14,7 +14,7 @@ public sealed class ResourceManagerPlugin : IVerseKitPlugin
     public Guid PluginId => new("a1b2c3d4-e5f6-7890-abcd-ef1234567890");
     public string Name => "Resource Manager";
     public string Description => "View, create, and update web resources in your Dynamics 365 environment";
-    public string Version => "0.1.0";
+    public string Version => "1.0.0";
 
     private IConnectionProvider? _connectionProvider;
 
