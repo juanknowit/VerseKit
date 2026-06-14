@@ -31,7 +31,7 @@ jobs:
       - name: Package plugins
         run: |
           mkdir -p staging
-          for p in ResourceManager TableBrowser SecurityRoles AccessChecker SolutionExplorer QueryRunner; do
+          for p in ResourceManager TableBrowser SecurityRoles AccessChecker SolutionExplorer QueryRunner DependencyViewer; do
             # Framework-dependent: the host shares Avalonia/Dataverse via its ALC.
             dotnet publish "plugins/$p" --self-contained false -c Release -o "out/$p"
             # Zip with the plugin folder as the top entry → extracts to <p>/<p>.dll

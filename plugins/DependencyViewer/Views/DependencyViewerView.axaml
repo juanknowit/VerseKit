@@ -1,0 +1,150 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DependencyViewer.ViewModels"
+             xmlns:models="using:DependencyViewer.Models"
+             x:Class="DependencyViewer.Views.DependencyViewerView"
+             x:DataType="vm:DependencyViewerViewModel">
+
+    <Grid RowDefinitions="Auto,*">
+
+        <!-- ══ Toolbar ════════════════════════════════════════════════ -->
+        <Border Grid.Row="0" Background="#F8F8FA" BorderBrush="#E5E5EA"
+                BorderThickness="0,0,0,1" Padding="16,10">
+            <Grid ColumnDefinitions="Auto,Auto,*,Auto">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="7"
+                            VerticalAlignment="Center" Margin="0,0,12,0">
+                    <TextBlock Text="Dependency Viewer" FontWeight="SemiBold" FontSize="13"
+                               Foreground="#1C1C1E" VerticalAlignment="Center"/>
+                    <Border Background="#EFE7FE" CornerRadius="5" Padding="6,1" VerticalAlignment="Center">
+                        <TextBlock Text="BETA" FontSize="9" FontWeight="Bold"
+                                   Foreground="#6B46C1" LetterSpacing="0.5"/>
+                    </Border>
+                </StackPanel>
+                <TextBox Grid.Column="1" PlaceholderText="Filter tables…"
+                         Text="{Binding FilterText}" Width="260" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="3" Text="{Binding StatusMessage}"
+                           FontSize="12" Foreground="#636366" VerticalAlignment="Center"
+                           Margin="12,0,0,0" TextTrimming="CharacterEllipsis"/>
+            </Grid>
+        </Border>
+
+        <!-- ══ Split: tables | dependencies ══════════════════════════ -->
+        <Grid Grid.Row="1" ColumnDefinitions="320,1,*">
+
+            <DockPanel Grid.Column="0" Background="White">
+                <ProgressBar DockPanel.Dock="Top" IsIndeterminate="True"
+                             IsVisible="{Binding IsLoading}" Height="2" Margin="0"/>
+                <ListBox ItemsSource="{Binding Tables}"
+                         SelectedItem="{Binding SelectedTable}"
+                         Background="Transparent" BorderThickness="0" Padding="6,4"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="models:EntityListItem">
+                            <StackPanel Spacing="1" Margin="2,1">
+                                <TextBlock Text="{Binding Title}" FontSize="12" FontWeight="Medium"
+                                           Foreground="#1C1C1E" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Text="{Binding LogicalName}" FontSize="10"
+                                           Foreground="#8E8E93" FontFamily="SF Mono,Menlo,monospace"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                    <ListBox.Styles>
+                        <Style Selector="ListBoxItem">
+                            <Setter Property="Padding" Value="8,5"/>
+                            <Setter Property="CornerRadius" Value="8"/>
+                        </Style>
+                        <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
+                            <Setter Property="Background" Value="#0F000000"/>
+                            <Setter Property="CornerRadius" Value="8"/>
+                        </Style>
+                        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+                            <Setter Property="Background" Value="{DynamicResource TintBrush}"/>
+                            <Setter Property="CornerRadius" Value="8"/>
+                        </Style>
+                    </ListBox.Styles>
+                </ListBox>
+            </DockPanel>
+
+            <Rectangle Grid.Column="1" Fill="#E5E5EA"/>
+
+            <Grid Grid.Column="2" RowDefinitions="Auto,*" Background="White">
+
+                <!-- Empty state -->
+                <StackPanel Grid.Row="0" Grid.RowSpan="2"
+                            IsVisible="{Binding !IsTableSelected}"
+                            HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+                    <TextBlock Text="Select a table" FontSize="16" FontWeight="Light"
+                               Foreground="#8E8E93" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Pick a table to see what depends on it before you delete it."
+                               FontSize="13" Foreground="#AEAEB2" HorizontalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- Header -->
+                <Border Grid.Row="0" IsVisible="{Binding IsTableSelected}"
+                        Background="#F8F8FA" BorderBrush="#E5E5EA" BorderThickness="0,0,0,1" Padding="16,10">
+                    <StackPanel Spacing="2" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding SelectedTable.Title}" FontSize="14"
+                                   FontWeight="SemiBold" Foreground="#1C1C1E"/>
+                        <TextBlock Text="{Binding SelectedTable.LogicalName}" FontSize="11"
+                                   Foreground="#636366" FontFamily="SF Mono,Menlo,monospace"/>
+                    </StackPanel>
+                </Border>
+
+                <DockPanel Grid.Row="1" IsVisible="{Binding IsTableSelected}">
+                    <Border DockPanel.Dock="Top" Padding="14,8"
+                            Background="#FBFBFD" BorderBrush="#E5E5EA" BorderThickness="0,0,0,1">
+                        <TextBlock Text="{Binding DependenciesStatus}" FontSize="11"
+                                   Foreground="#636366" VerticalAlignment="Center"/>
+                    </Border>
+                    <ProgressBar DockPanel.Dock="Top" IsIndeterminate="True" Height="2" Margin="0"
+                                 IsVisible="{Binding IsDependenciesLoading}"/>
+
+                    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,180,130" Background="#FAFAFB" Height="28">
+                        <TextBlock Grid.Column="0" Text="DEPENDENT COMPONENT" Margin="16,0,0,0"
+                                   FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="1" Text="TYPE" FontSize="10" FontWeight="SemiBold"
+                                   Foreground="#8E8E93" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="2" Text="DEPENDENCY" FontSize="10" FontWeight="SemiBold"
+                                   Foreground="#8E8E93" VerticalAlignment="Center"/>
+                    </Grid>
+
+                    <ListBox ItemsSource="{Binding Dependencies}"
+                             Background="Transparent" BorderThickness="0" Padding="0"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="models:DependencyItem">
+                                <Grid ColumnDefinitions="*,180,130" Height="38">
+                                    <StackPanel Grid.Column="0" Spacing="1" VerticalAlignment="Center" Margin="16,0,6,0">
+                                        <TextBlock Text="{Binding Name}" FontSize="12" Foreground="#1C1C1E"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding Detail}" FontSize="10" Foreground="#AEAEB2"
+                                                   FontFamily="SF Mono,Menlo,monospace"
+                                                   IsVisible="{Binding Detail, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="1" Text="{Binding TypeName}" FontSize="12"
+                                               Foreground="#636366" VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis" Margin="0,0,6,0"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding DependencyKind}" FontSize="11"
+                                               Foreground="#8E8E93" VerticalAlignment="Center"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                        <ListBox.Styles>
+                            <Style Selector="ListBoxItem">
+                                <Setter Property="Padding" Value="0"/>
+                            </Style>
+                            <Style Selector="ListBoxItem:nth-child(2n) /template/ ContentPresenter">
+                                <Setter Property="Background" Value="#FAFAFB"/>
+                            </Style>
+                            <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
+                                <Setter Property="Background" Value="#0F000000"/>
+                            </Style>
+                        </ListBox.Styles>
+                    </ListBox>
+                </DockPanel>
+            </Grid>
+        </Grid>
+    </Grid>
+</UserControl>
