@@ -67,9 +67,11 @@ Connected (new profile)                         Connected
 
 | File | Location | Contents |
 |---|---|---|
-| `appsettings.json` | App bundle Resources | Default config, Azure AD app IDs for auth |
-| `settings.user.json` | `~/.config/versekit/` | User preferences (theme, window size) |
-| Connection profiles | macOS Keychain | Encrypted per-profile JSON |
+| `settings.json` | `~/.config/versekit/` | User preferences (accent colour, background style) |
+| `folders.json` | `~/.config/versekit/` | Ordered sidebar folder names |
+| Connection profiles | `~/.config/versekit/profiles/` | Non-secret profile metadata (JSON, one per profile) |
+| Connection secrets | macOS Keychain | Client secret / certificate password only |
+| MSAL token cache | `~/.local/share/versekit/msal/` | Token cache blob (encryption key in Keychain) |
 | Plugin directory | `~/.local/share/versekit/plugins/` | Downloaded plugin assemblies |
 | Logs | `~/.local/share/versekit/logs/` | Rotating Serilog file sink |
 

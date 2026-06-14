@@ -29,8 +29,9 @@ ones.
 
 ## 2. Design tokens
 
-Defined in `App.axaml` → `Application.Resources`. Reference them with
-`{StaticResource Key}`; never hard-code these hexes in a view.
+Defined in `App.axaml` → `Application.Resources`. Reference fixed tokens with
+`{StaticResource Key}`, and accent/background tokens (see below) with
+`{DynamicResource Key}` so they recolour live; never hard-code these hexes in a view.
 
 ### Active tokens
 
@@ -61,15 +62,30 @@ Defined in `App.axaml` → `Application.Resources`. Reference them with
 | Connected chip fill | `#E3F5E9` |
 | Active connection dot | `#26A641`; inactive `#C0C0C0` |
 
+### Accent-derived tokens (themed — reference with `{DynamicResource}`)
+
+The accent colour is **user-selectable** (Settings → Theme; eight presets,
+persisted to `~/.config/versekit/settings.json`). `ThemeManager` overrides the base
+accent *and everything derived from it* at runtime, so anything that should follow
+the accent must use `{DynamicResource}`, never `{StaticResource}`:
+`AccentColor`/`AccentBrush`, `AccentHoverBrush`, `AccentPressedBrush`,
+`TintBrush`/`TintHoverBrush`/`TintPressedBrush` (selection washes),
+`AccentTextBrush`, `SelectionBrush`, and the Fluent `SystemAccentColor*` shades.
+
+### Background tokens (themed)
+
+Settings → Background offers **Glass** (transparent over `AcrylicBlur` — the
+default), **Theme** (an opaque accent-derived diagonal gradient), or **White**.
+`ThemeManager` sets `WindowBackgroundBrush` and `TitleBarForegroundBrush` from the
+saved choice; reference both with `{DynamicResource}`.
+
 ### Legacy / deprecated tokens (do not use in new work)
 
-These are leftovers from abandoned experiments (colored buttons, glass, filled
-fields). They remain only so nothing breaks; **prefer the active tokens** and feel
-free to delete these in a cleanup pass:
-`TintBrush`, `TintHoverBrush`, `TintPressedBrush`, `AccentTextBrush`,
-`SuccessTintBrush`/`*Hover`/`*Pressed`, `SuccessTextBrush`,
-`AccentHoverBrush`, `AccentPressedBrush`, `FieldBorderBrush`,
-`FieldFillBrush`, `FieldFillHoverBrush`, `ControlHoverBrush`, `ControlPressedBrush`.
+Leftovers from abandoned experiments (filled fields, coloured success buttons).
+They remain only so nothing breaks; **prefer the active tokens** and feel free to
+delete these in a cleanup pass:
+`SuccessTintBrush`/`*Hover`/`*Pressed`, `SuccessTextBrush`, `FieldBorderBrush`,
+`FieldFillBrush`, `FieldFillHoverBrush`.
 
 ---
 
@@ -112,15 +128,18 @@ and rejected. Focus is indicated by the caret and selection only — keep it qui
 
 ## 5. Layout & surfaces
 
-- **Window:** `TransparencyLevelHint="AcrylicBlur"`, transparent background,
-  extended client area. The blurred desktop shows only in the gaps *around* the
-  floating panels — see the acrylic constraint in §8.
+- **Window:** `TransparencyLevelHint="AcrylicBlur"` (always on), extended client
+  area, background = `{DynamicResource WindowBackgroundBrush}` driven by the
+  Background setting (Glass = transparent so the blurred desktop shows in the gaps
+  around the cards; Theme = opaque accent gradient; White). Title-bar text/icons
+  bind to `TitleBarForegroundBrush` to stay legible on all three — see §8.
 - **Title bar:** 52px row. The grid stays hit-testable; only the centered title is
   `IsHitTestVisible="False"` so the window still drags but the cog stays clickable.
-- **Floating cards:** solid white, `CardRadius` (14), `BoxShadow="0 4 24 4 #28000000"`,
-  with a margin so the acrylic shows around them. This is the sidebar and the
-  content area. Card shadows are fine — they sit over the desktop, not over
-  in-app content.
+- **Floating cards:** solid white, `CardRadius` (14), **no drop shadow**, with a
+  margin so the background shows around them. This is the sidebar and the content
+  area. (Earlier builds shadowed the cards; on the lighter Theme/White backgrounds
+  it read as a heavy halo, so it was removed — the margin and background contrast
+  separate them instead. See §8.)
 - **Bars** (toolbars, action bars): `#F8F8FA` fill, `#E5E5EA` hairline on the
   dividing edge, compact padding (`16,10` top bar, `12,8` action bar).
 - **Modal sheets** (`Border.FormCard`): white, radius `16`, `BoxShadow="0 6 20 2 #2E000000"`,
@@ -128,8 +147,9 @@ and rejected. Focus is indicated by the caret and selection only — keep it qui
   top-right is the dismiss control — do **not** add a duplicate Cancel button.
 - **Status chip** (`Border.StatusChip`): neutral grey; `.connected` class swaps to a
   solid pale-green fill (`#E3F5E9`). No animation.
-- **Sidebar list** (`ListBox.SidebarList`): selection is a pale tint
-  (`#E9F2FF`) with dark text, Finder-style — not a saturated fill.
+- **Sidebar list** (`ListBox.SidebarList`): selection is a pale accent tint
+  (`{DynamicResource TintBrush}`, derived from the chosen accent) with dark text,
+  Finder-style — not a saturated fill.
 
 ---
 
@@ -153,9 +173,9 @@ System font (`-apple-system` equivalent via Avalonia default). Sizes in use:
 - **Icons:** simple Unicode glyphs (⚙ ✎ ✕ ↑ ＋) at low-key greys, not an icon font.
   Web-resource type badges are 3-letter labels on a colored rounded rect
   (`WebResourceItem.TypeColor`).
-- **App icon:** generated by `scripts/create-icon.py` -> bold "VK" lettermark with a
-  faint vertical gradient on a blue squircle (App Store style). Re-run that +
-  `generate-icon.sh` to change it.
+- **App icon:** generated by `scripts/create-icon.py` -> a dotted "global data"
+  globe on a blue squircle, with the wordmark "VERSE" spaced wide across the centre
+  so it reads as the equator line. Re-run that + `generate-icon.sh` to change it.
 - **Motion:** essentially none. We tried an animated connection glow and removed it.
   Prefer static state changes. If you add motion, keep it sub-300ms and optional.
 
@@ -169,11 +189,14 @@ These cost real iteration. Respect them:
    `ClipToBounds="True"`, and the content card clips at its rounded edge — both cut
    drop shadows. We abandoned button/input shadows entirely in favor of the
    `PillEdgeBrush` hairline. **Don't reintroduce drop shadows on buttons/inputs.**
-   (Shadows on the big floating *cards* are fine — they overflow into the acrylic gap.)
+   (We also dropped shadows on the big floating *cards*: on the lighter Theme/White
+   backgrounds they read as a heavy halo. The cards separate via their margin and
+   background contrast instead.)
 2. **`AcrylicBlur` only frosts the desktop behind the window**, not in-app content
    behind a control. "Glass" buttons over white panels look muddy and were dropped.
-   Real glass only works over the transparent title-bar region, which isn't worth a
-   single control.
+   (Acrylic *is* still offered as the **Glass** window-background option — that
+   frosts the desktop in the gaps around the cards, which works; glass *behind a
+   control* does not.)
 3. **Focus rings as `BoxShadow` render jagged corners** and thrash on caret blink.
    If you ever need a focus ring, use a border, not a shadow.
 4. **`IsHitTestVisible="False"` disables the whole subtree** — children can't opt
@@ -188,11 +211,11 @@ These cost real iteration. Respect them:
 
 ## 9. Checklist for new UI
 
-- [ ] Uses `{StaticResource}` tokens, no hard-coded hexes for themed colors.
+- [ ] Uses tokens, no hard-coded hexes — `{DynamicResource}` for accent/background-following colours, `{StaticResource}` for fixed ones.
 - [ ] Buttons use a class from §3; at most one `Primary` per group; red only for destructive.
 - [ ] Inputs are white pills, radius 18, no hover/focus border.
-- [ ] New surfaces follow §5 (white cards on acrylic, `#F8F8FA` bars, hairlines `#E5E5EA`).
-- [ ] No drop shadows on buttons/inputs; no glass; minimal/no motion.
+- [ ] New surfaces follow §5 (white cards, no card shadow, `#F8F8FA` bars, hairlines `#E5E5EA`).
+- [ ] No drop shadows on buttons/inputs or cards; no glass *behind controls*; minimal/no motion.
 - [ ] Destructive actions confirm before acting (see the publish/delete pattern).
 - [ ] Any new `CanExecute` command has matching `NotifyCanExecuteChangedFor`.
 - [ ] Verified by running the app, not just building (see `/verify`).

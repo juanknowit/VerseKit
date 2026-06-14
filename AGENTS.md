@@ -45,12 +45,13 @@ This project targets macOS using .NET and Avalonia UI.
 |---|---|
 | `src/VerseKit.PluginSdk/IVerseKitPlugin.cs` | Plugin contract — all plugins implement this |
 | `src/VerseKit.PluginSdk/IConnectionProvider.cs` | How plugins request a `ServiceClient` |
-| `src/VerseKit.Core/PluginHost.cs` | MEF-based plugin discovery and lifecycle |
-| `src/VerseKit.Core/ConnectionManager.cs` | Manages named connection profiles |
-| `src/VerseKit.Core/DataverseClientFactory.cs` | Creates authenticated `ServiceClient` instances |
-| `src/VerseKit.Core/KeychainService.cs` | macOS Keychain read/write via P/Invoke |
-| `src/VerseKit.App/MainWindow.axaml` | Root Avalonia window |
-| `src/VerseKit.App/ViewModels/MainViewModel.cs` | Shell view model |
+| `src/VerseKit.Core/Services/PluginHost.cs` | MEF-based plugin discovery and lifecycle |
+| `src/VerseKit.Core/Services/ConnectionManager.cs` | Manages named connection profiles |
+| `src/VerseKit.Core/Services/DataverseClientFactory.cs` | Creates authenticated `ServiceClient` instances |
+| `src/VerseKit.Core/Services/KeychainService.cs` | macOS Keychain read/write via P/Invoke |
+| `src/VerseKit.App/Views/MainWindow.axaml` | Root Avalonia window |
+| `src/VerseKit.App/ViewModels/MainWindowViewModel.cs` | Shell view model |
+| `src/VerseKit.App/Theming/ThemeManager.cs` | Applies + persists accent colour & background style |
 
 ---
 
