@@ -69,7 +69,14 @@ public sealed class PluginHost(ILogger<PluginHost> logger) : IDisposable
     private Task LoadPluginAssemblyAsync(string assemblyPath, PluginOrigin origin, CancellationToken ct)
     {
         var context = new PluginLoadContext(assemblyPath);
-        var assembly = context.LoadFromAssemblyPath(assemblyPath);
+        // Load the plugin's own assembly from a byte stream rather than by path.
+        // When a plugin is updated in place, a path-load can hand back the stale
+        // image still memory-mapped by a not-yet-collected previous context, so
+        // the reload would report the OLD version. Reading the bytes guarantees
+        // the freshly written file is what actually gets loaded.
+        Assembly assembly;
+        using (var stream = File.OpenRead(assemblyPath))
+            assembly = context.LoadFromStream(stream);
 
         var pluginTypes = assembly.GetTypes()
             .Where(t => !t.IsAbstract && t.IsClass && typeof(IVerseKitPlugin).IsAssignableFrom(t));
