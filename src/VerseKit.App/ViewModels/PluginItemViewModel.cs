@@ -1,4 +1,5 @@
 using System.Linq;
+using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using VerseKit.Core.Models;
 
@@ -22,6 +23,7 @@ public sealed partial class PluginItemViewModel : ObservableObject
     public bool IsBundled => Entry.Origin == PluginOrigin.Bundled;
     public bool IsRemovable => Entry.Origin == PluginOrigin.User;
     public string OriginLabel => IsBundled ? "Bundled" : "Installed";
+    public IBrush IconBrush => PluginColor.For(Entry.Plugin.PluginId.ToString());
 
     /// <summary>Up to two uppercase initials from the plugin name, for the row icon.</summary>
     public string Initials

@@ -1,4 +1,5 @@
 using System.Linq;
+using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using VerseKit.App.Services;
 
@@ -16,6 +17,7 @@ public sealed partial class PluginCatalogItemViewModel : ObservableObject
     public string Version => $"v{Entry.Version}";
     public string Description => Entry.Description;
     public string Author => string.IsNullOrWhiteSpace(Entry.Author) ? "Unknown" : Entry.Author!;
+    public IBrush IconBrush => PluginColor.For(Entry.Id);
 
     public string Initials
     {

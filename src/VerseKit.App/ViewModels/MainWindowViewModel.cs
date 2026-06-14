@@ -115,11 +115,13 @@ public partial class MainWindowViewModel : ViewModelBase
     private string _bundledPluginRoot = "";
     private HashSet<Guid> _disabledPlugins = [];
 
-    /// <summary>Plugins available to install from the registry.</summary>
+    /// <summary>Plugins available to install (not installed, or with an update).</summary>
     public ObservableCollection<PluginCatalogItemViewModel> CatalogItems { get; } = [];
 
     [ObservableProperty] private bool _isCatalogLoading;
     [ObservableProperty] private string? _catalogStatus;
+
+    private IReadOnlyList<Services.PluginRegistryEntry> _registry = [];
 
     /// <summary>Flat list of all connections, kept for IsActive bookkeeping.</summary>
     public ObservableCollection<SavedConnectionItem> SavedProfiles { get; } = [];
@@ -367,6 +369,9 @@ public partial class MainWindowViewModel : ViewModelBase
             PluginItems.Add(new PluginItemViewModel(entry, enabled) { EnabledChanged = OnPluginEnabledToggled });
             if (enabled) Plugins.Add(entry);
         }
+
+        // Keep the "Available" list in sync with what's now installed.
+        RebuildCatalog();
     }
 
     private async Task RefreshSavedProfilesAsync(CancellationToken ct)
@@ -600,12 +605,9 @@ public partial class MainWindowViewModel : ViewModelBase
         CatalogStatus = null;
         try
         {
-            var entries = await _catalog.FetchAsync(ct);
-            CatalogItems.Clear();
-            foreach (var e in entries)
-                CatalogItems.Add(new PluginCatalogItemViewModel(e));
-            RefreshCatalogStates();
-            if (CatalogItems.Count == 0)
+            _registry = await _catalog.FetchAsync(ct);
+            RebuildCatalog();
+            if (_registry.Count == 0)
                 CatalogStatus = "No plugins available (couldn't reach the registry).";
         }
         finally
@@ -614,19 +616,32 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
-    /// <summary>Marks each catalog item installed/updatable against the loaded plugins.</summary>
-    private void RefreshCatalogStates()
+    /// <summary>Rebuilds the "Available" list from the cached registry, showing only
+    /// plugins that aren't installed — or that have a newer version available.</summary>
+    private void RebuildCatalog()
     {
-        foreach (var item in CatalogItems)
+        CatalogItems.Clear();
+        foreach (var entry in _registry)
         {
             var installed = PluginItems.FirstOrDefault(p =>
-                p.Entry.Plugin.PluginId.ToString().Equals(item.Entry.Id, StringComparison.OrdinalIgnoreCase));
-            item.IsInstalled = installed is not null;
-            item.IsUpdateAvailable = installed is not null
-                && Version.TryParse(item.Entry.Version, out var avail)
+                p.Entry.Plugin.PluginId.ToString().Equals(entry.Id, StringComparison.OrdinalIgnoreCase));
+            var updateAvailable = installed is not null
+                && Version.TryParse(entry.Version, out var avail)
                 && Version.TryParse(installed.Entry.Plugin.Version, out var cur)
                 && avail > cur;
+
+            // Already installed and current → hide from "Available".
+            if (installed is not null && !updateAvailable) continue;
+
+            CatalogItems.Add(new PluginCatalogItemViewModel(entry)
+            {
+                IsInstalled = installed is not null,
+                IsUpdateAvailable = updateAvailable,
+            });
         }
+
+        if (_registry.Count > 0)
+            CatalogStatus = CatalogItems.Count == 0 ? "All available plugins are installed." : null;
     }
 
     [RelayCommand]
@@ -636,22 +651,21 @@ public partial class MainWindowViewModel : ViewModelBase
 
         item.IsBusy = true;
         CatalogStatus = $"Installing {item.Name}…";
+        var name = item.Name;
         try
         {
             await _pluginHost.ResetAsync();
             await _catalog.InstallAsync(item.Entry, _userPluginRoot, progress: null, ct: CancellationToken.None);
             await DiscoverAllAsync(CancellationToken.None);
-            RebuildPluginLists();
-            RefreshCatalogStates();
-            CatalogStatus = $"Installed {item.Name}.";
+            RebuildPluginLists();          // also rebuilds the catalog (drops the now-installed row)
+            CatalogStatus = $"Installed {name}.";
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to install '{Name}' from catalog", item.Name);
-            CatalogStatus = $"Install failed: {ex.Message}";
+            _logger.LogError(ex, "Failed to install '{Name}' from catalog", name);
             await DiscoverAllAsync(CancellationToken.None);
             RebuildPluginLists();
-            RefreshCatalogStates();
+            CatalogStatus = $"Install failed: {ex.Message}";
         }
         finally
         {
