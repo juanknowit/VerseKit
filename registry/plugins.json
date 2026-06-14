@@ -41,20 +41,20 @@
       "id": "e5f6a7b8-c9d0-1234-efab-567890123456",
       "name": "Solution Explorer",
       "description": "Browse solutions, see their components, and export managed/unmanaged to disk.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "author": "VerseKit",
-      "downloadUrl": "https://github.com/juanknowit/VerseKit/releases/download/plugins-v4/SolutionExplorer.zip",
-      "sha256": "b2ba1ae563c0d5acf17d98eb55cec8559d98821b73cd513ed4a82640eb8dc5ef",
+      "downloadUrl": "https://github.com/juanknowit/VerseKit/releases/download/plugins-v6/SolutionExplorer.zip",
+      "sha256": "70dc698a2a34115df5f1e194394c5b175686f4cd07cccf2bcbf4c53ed3dbd927",
       "beta": true
     },
     {
       "id": "f6a7b8c9-d0e1-2345-fabc-678901234568",
       "name": "Query Runner",
       "description": "Run FetchXML or OData queries, view results in a grid, and export to CSV/Excel — read only.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "author": "VerseKit",
-      "downloadUrl": "https://github.com/juanknowit/VerseKit/releases/download/plugins-v5/QueryRunner.zip",
-      "sha256": "c7c0a43ea2106f2bad8f5644e8082c74ad0fc805975fdd48f3b10590878aab51",
+      "downloadUrl": "https://github.com/juanknowit/VerseKit/releases/download/plugins-v6/QueryRunner.zip",
+      "sha256": "f574e488f89a7fc3cf21dad9c51dbd172d59fa703caf3495707660708d0b2177",
       "beta": true
     }
   ]
