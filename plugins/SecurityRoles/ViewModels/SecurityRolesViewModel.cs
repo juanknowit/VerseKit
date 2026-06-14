@@ -9,6 +9,7 @@ using Microsoft.Xrm.Sdk.Messages;
 using Microsoft.Xrm.Sdk.Metadata;
 using Microsoft.Xrm.Sdk.Query;
 using SecurityRoles.Models;
+using SecurityRoles.Services;
 using VerseKit.PluginSdk;
 
 namespace SecurityRoles.ViewModels;
@@ -50,6 +51,12 @@ public sealed partial class SecurityRolesViewModel : ObservableObject
     private RoleItem? _selectedRole;
 
     public bool IsRoleSelected => SelectedRole is not null;
+
+    /// <summary>
+    /// Set by the view: prompts for a save path (suggested file name → chosen path or null).
+    /// Lives here because the file picker needs the window's StorageProvider.
+    /// </summary>
+    public Func<string, Task<string?>>? PickSavePathAsync { get; set; }
 
     public SecurityRolesViewModel(IConnectionProvider connectionProvider)
     {
@@ -382,6 +389,57 @@ public sealed partial class SecurityRolesViewModel : ObservableObject
         if (ownership.Value.HasFlag(OwnershipTypes.BusinessOwned)) return "BU";
         if (ownership.Value.HasFlag(OwnershipTypes.UserOwned)) return "User/Team";
         return "—";
+    }
+
+    // ── Export to Excel ────────────────────────────────────────────────
+
+    [RelayCommand]
+    private async Task ExportMembersAsync()
+    {
+        if (SelectedRole is not { } role || PickSavePathAsync is null) return;
+        if (Members.Count == 0) { MembersStatus = "Nothing to export."; return; }
+
+        var path = await PickSavePathAsync(SafeFileName($"{role.Title} - members") + ".xlsx");
+        if (string.IsNullOrEmpty(path)) return;
+
+        var snapshot = Members.ToList();
+        try
+        {
+            await Task.Run(() => RoleExcelExporter.ExportMembers(path, role, snapshot));
+            MembersStatus = $"Exported {snapshot.Count} member(s) to {Path.GetFileName(path)}";
+        }
+        catch (Exception ex)
+        {
+            MembersStatus = $"Export failed: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private async Task ExportPrivilegesAsync()
+    {
+        if (SelectedRole is not { } role || PickSavePathAsync is null) return;
+        if (Privileges.Count == 0) { PrivilegesStatus = "Nothing to export."; return; }
+
+        var path = await PickSavePathAsync(SafeFileName($"{role.Title} - table permissions") + ".xlsx");
+        if (string.IsNullOrEmpty(path)) return;
+
+        var snapshot = Privileges.ToList();
+        try
+        {
+            await Task.Run(() => RoleExcelExporter.ExportPrivileges(path, role, snapshot));
+            PrivilegesStatus = $"Exported {snapshot.Count} table(s) to {Path.GetFileName(path)}";
+        }
+        catch (Exception ex)
+        {
+            PrivilegesStatus = $"Export failed: {ex.Message}";
+        }
+    }
+
+    private static string SafeFileName(string name)
+    {
+        foreach (var ch in Path.GetInvalidFileNameChars())
+            name = name.Replace(ch, '_');
+        return name;
     }
 
     private sealed record EntityPrivMeta(
