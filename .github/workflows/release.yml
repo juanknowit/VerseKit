@@ -34,23 +34,14 @@ jobs:
       # and bundled by scripts/bundle-app.sh — no generation step needed.
 
       # ── Build plugins (arch-independent .NET DLLs) ─────────────────
-      - name: Publish Resource Manager plugin
+      # Every plugin here is bundled into the app so it ships built-in.
+      - name: Publish bundled plugins
         run: |
-          dotnet publish plugins/ResourceManager \
-            --self-contained false \
-            -c Release -o publish/plugins/ResourceManager
-
-      - name: Publish Table Browser plugin
-        run: |
-          dotnet publish plugins/TableBrowser \
-            --self-contained false \
-            -c Release -o publish/plugins/TableBrowser
-
-      - name: Publish Security Roles plugin
-        run: |
-          dotnet publish plugins/SecurityRoles \
-            --self-contained false \
-            -c Release -o publish/plugins/SecurityRoles
+          for p in ResourceManager TableBrowser SecurityRoles AccessChecker; do
+            dotnet publish "plugins/$p" \
+              --self-contained false \
+              -c Release -o "publish/plugins/$p"
+          done
 
       # ── Publish the host app ───────────────────────────────────────
       - name: Publish App (Apple Silicon — arm64)
@@ -72,7 +63,7 @@ jobs:
       # ── Bundle plugins into each publish folder ────────────────────
       - name: Stage plugins — arm64
         run: |
-          for p in ResourceManager TableBrowser SecurityRoles; do
+          for p in ResourceManager TableBrowser SecurityRoles AccessChecker; do
             DST="publish/osx-arm64/plugins/$p"
             mkdir -p "$DST"
             cp -r "publish/plugins/$p/." "$DST/"
@@ -80,7 +71,7 @@ jobs:
 
       - name: Stage plugins — x64
         run: |
-          for p in ResourceManager TableBrowser SecurityRoles; do
+          for p in ResourceManager TableBrowser SecurityRoles AccessChecker; do
             DST="publish/osx-x64/plugins/$p"
             mkdir -p "$DST"
             cp -r "publish/plugins/$p/." "$DST/"
