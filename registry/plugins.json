@@ -46,6 +46,16 @@
       "downloadUrl": "https://github.com/juanknowit/VerseKit/releases/download/plugins-v4/SolutionExplorer.zip",
       "sha256": "b2ba1ae563c0d5acf17d98eb55cec8559d98821b73cd513ed4a82640eb8dc5ef",
       "beta": true
+    },
+    {
+      "id": "f6a7b8c9-d0e1-2345-fabc-678901234568",
+      "name": "Query Runner",
+      "description": "Run FetchXML or OData queries, view results in a grid, and export to CSV/Excel — read only.",
+      "version": "1.0.0",
+      "author": "VerseKit",
+      "downloadUrl": "https://github.com/juanknowit/VerseKit/releases/download/plugins-v5/QueryRunner.zip",
+      "sha256": "c7c0a43ea2106f2bad8f5644e8082c74ad0fc805975fdd48f3b10590878aab51",
+      "beta": true
     }
   ]
 }
