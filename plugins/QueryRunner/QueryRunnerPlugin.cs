@@ -15,7 +15,7 @@ public sealed class QueryRunnerPlugin : IVerseKitPlugin
     public Guid PluginId => new("f6a7b8c9-d0e1-2345-fabc-678901234568");
     public string Name => "Query Runner";
     public string Description => "Run FetchXML or OData queries, view results in a grid, and export to CSV/Excel — read only";
-    public string Version => "1.0.0";
+    public string Version => "1.1.0";
 
     private IConnectionProvider? _connectionProvider;
 
