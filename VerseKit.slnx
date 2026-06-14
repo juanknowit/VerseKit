@@ -9,4 +9,7 @@
     <Project Path="src/VerseKit.Core/VerseKit.Core.csproj" />
     <Project Path="src/VerseKit.PluginSdk/VerseKit.PluginSdk.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/VerseKit.Tests/VerseKit.Tests.csproj" />
+  </Folder>
 </Solution>
