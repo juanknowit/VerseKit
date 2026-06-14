@@ -109,6 +109,30 @@ public interface IConnectionProvider
 
 ---
 
+## Plugin Distribution: bundled vs registry-only
+
+Every plugin is published to the **registry** so users can install/update it
+in-app (Tools → Manage → Available). A plugin can *additionally* be **bundled**
+into the app so it ships built-in on a fresh download. Decide per plugin:
+
+| | Bundled + registry | Registry-only |
+|---|---|---|
+| Ships in the `.app` on install | Yes | No |
+| Appears in Manage | As **Installed (Bundled)**, no Remove | Under **Available** until installed |
+| Use for | Stable, core tools | New / experimental / niche tools |
+
+**To add a plugin, edit single lists:**
+- **Registry (always):** add a build step to `.github/workflows/plugins.yml`, an entry to `registry/plugins.json` (id, version, `downloadUrl` → the `plugins-vN` release, `sha256`), and the project to `VerseKit.slnx`.
+- **Bundle (only if it's a standard core tool):** also add it to the plugin list in `.github/workflows/release.yml` (build + both stage steps).
+
+Mark a not-yet-stable plugin with `"beta": true` in `registry/plugins.json` — the
+Manage list shows a **BETA** badge. New tools should default to **registry-only**
+(and usually beta) until proven; promote to bundled once stable.
+
+Example: Access Checker is bundled (core); Solution Explorer is registry-only + beta.
+
+---
+
 ## Connection Flow
 
 ```
