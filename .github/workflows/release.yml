@@ -46,6 +46,12 @@ jobs:
             --self-contained false \
             -c Release -o publish/plugins/TableBrowser
 
+      - name: Publish Security Roles plugin
+        run: |
+          dotnet publish plugins/SecurityRoles \
+            --self-contained false \
+            -c Release -o publish/plugins/SecurityRoles
+
       # ── Publish the host app ───────────────────────────────────────
       - name: Publish App (Apple Silicon — arm64)
         run: |
@@ -66,7 +72,7 @@ jobs:
       # ── Bundle plugins into each publish folder ────────────────────
       - name: Stage plugins — arm64
         run: |
-          for p in ResourceManager TableBrowser; do
+          for p in ResourceManager TableBrowser SecurityRoles; do
             DST="publish/osx-arm64/plugins/$p"
             mkdir -p "$DST"
             cp -r "publish/plugins/$p/." "$DST/"
@@ -74,7 +80,7 @@ jobs:
 
       - name: Stage plugins — x64
         run: |
-          for p in ResourceManager TableBrowser; do
+          for p in ResourceManager TableBrowser SecurityRoles; do
             DST="publish/osx-x64/plugins/$p"
             mkdir -p "$DST"
             cp -r "publish/plugins/$p/." "$DST/"

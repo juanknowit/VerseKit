@@ -1,6 +1,6 @@
 PLUGIN_DIR   := $(HOME)/.local/share/versekit/plugins
 APP_PROJECT  := src/VerseKit.App
-PLUGINS      := ResourceManager TableBrowser
+PLUGINS      := ResourceManager TableBrowser SecurityRoles
 VERSION      := $(shell grep '<Version>' $(APP_PROJECT)/VerseKit.App.csproj | grep -o '[0-9][^<]*')
 
 .PHONY: run build install-plugins icon bundle clean list-plugins
