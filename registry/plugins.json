@@ -36,6 +36,16 @@
       "author": "VerseKit",
       "downloadUrl": "https://github.com/juanknowit/VerseKit/releases/download/plugins-v3/AccessChecker.zip",
       "sha256": "88534ad149ad0e75285bb3bcc47f86ea4c06ac47d32d091bafd3855029fdb079"
+    },
+    {
+      "id": "e5f6a7b8-c9d0-1234-efab-567890123456",
+      "name": "Solution Explorer",
+      "description": "Browse solutions, see their components, and export managed/unmanaged to disk.",
+      "version": "1.0.0",
+      "author": "VerseKit",
+      "downloadUrl": "https://github.com/juanknowit/VerseKit/releases/download/plugins-v4/SolutionExplorer.zip",
+      "sha256": "b2ba1ae563c0d5acf17d98eb55cec8559d98821b73cd513ed4a82640eb8dc5ef",
+      "beta": true
     }
   ]
 }
