@@ -56,6 +56,16 @@
       "downloadUrl": "https://github.com/juanknowit/VerseKit/releases/download/plugins-v6/QueryRunner.zip",
       "sha256": "f574e488f89a7fc3cf21dad9c51dbd172d59fa703caf3495707660708d0b2177",
       "beta": true
+    },
+    {
+      "id": "a7b8c9d0-e1f2-3456-abcd-789012345671",
+      "name": "Dependency Viewer",
+      "description": "See what depends on a table before deleting it — read only.",
+      "version": "1.0.0",
+      "author": "VerseKit",
+      "downloadUrl": "https://github.com/juanknowit/VerseKit/releases/download/plugins-v7/DependencyViewer.zip",
+      "sha256": "64fe473244d9845cc0a668ba3159ccecd4a3800506c07a543b026e1d737bfd33",
+      "beta": true
     }
   ]
 }
