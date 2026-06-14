@@ -1,0 +1,374 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:AccessChecker.ViewModels"
+             xmlns:models="using:AccessChecker.Models"
+             x:Class="AccessChecker.Views.AccessCheckerView"
+             x:DataType="vm:AccessCheckerViewModel">
+
+    <Grid RowDefinitions="Auto,*">
+
+        <!-- ══ Toolbar: filter + status ══════════════════════════════ -->
+        <Border Grid.Row="0"
+                Background="#F8F8FA"
+                BorderBrush="#E5E5EA"
+                BorderThickness="0,0,0,1"
+                Padding="16,10">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <TextBlock Grid.Column="0" Text="Access Checker"
+                           FontWeight="SemiBold" FontSize="13"
+                           Foreground="#1C1C1E" VerticalAlignment="Center"
+                           Margin="0,0,12,0"/>
+                <TextBox Grid.Column="1"
+                         PlaceholderText="Filter users by name or email…"
+                         Text="{Binding FilterText}"
+                         HorizontalAlignment="Left" Width="280"/>
+                <TextBlock Grid.Column="2" Text="{Binding StatusMessage}"
+                           FontSize="12" Foreground="#636366"
+                           VerticalAlignment="Center" Margin="12,0,0,0"
+                           TextTrimming="CharacterEllipsis"/>
+            </Grid>
+        </Border>
+
+        <!-- ══ Split: users | detail ═════════════════════════════════ -->
+        <Grid Grid.Row="1" ColumnDefinitions="320,1,*">
+
+            <!-- ── Users list ──────────────────────────────────────── -->
+            <DockPanel Grid.Column="0" Background="White">
+                <ProgressBar DockPanel.Dock="Top" IsIndeterminate="True"
+                             IsVisible="{Binding IsLoading}" Height="2" Margin="0"/>
+                <ListBox ItemsSource="{Binding Users}"
+                         SelectedItem="{Binding SelectedUser}"
+                         Background="Transparent" BorderThickness="0"
+                         Padding="6,4"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="models:UserItem">
+                            <Grid ColumnDefinitions="Auto,*" Margin="0,1">
+                                <Border Grid.Column="0"
+                                        Background="{Binding BadgeColor}"
+                                        CornerRadius="7" Width="30" Height="30"
+                                        VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Initials}"
+                                               FontSize="11" FontWeight="Bold"
+                                               Foreground="White"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" Spacing="1"
+                                            VerticalAlignment="Center" Margin="9,0,0,0">
+                                    <TextBlock Text="{Binding Title}"
+                                               FontSize="12" FontWeight="Medium"
+                                               Foreground="#1C1C1E"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding Secondary}"
+                                               FontSize="10" Foreground="#8E8E93"
+                                               TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                    <ListBox.Styles>
+                        <Style Selector="ListBoxItem">
+                            <Setter Property="Padding" Value="8,5"/>
+                            <Setter Property="CornerRadius" Value="8"/>
+                        </Style>
+                        <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
+                            <Setter Property="Background" Value="#0F000000"/>
+                            <Setter Property="CornerRadius" Value="8"/>
+                        </Style>
+                        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+                            <Setter Property="Background" Value="{DynamicResource TintBrush}"/>
+                            <Setter Property="CornerRadius" Value="8"/>
+                        </Style>
+                    </ListBox.Styles>
+                </ListBox>
+            </DockPanel>
+
+            <Rectangle Grid.Column="1" Fill="#E5E5EA"/>
+
+            <!-- ── Detail of the selected user ─────────────────────── -->
+            <Grid Grid.Column="2" RowDefinitions="Auto,*" Background="White">
+
+                <!-- Empty state -->
+                <StackPanel Grid.Row="0" Grid.RowSpan="2"
+                            IsVisible="{Binding !IsUserSelected}"
+                            HorizontalAlignment="Center" VerticalAlignment="Center"
+                            Spacing="8">
+                    <TextBlock Text="Select a user" FontSize="16" FontWeight="Light"
+                               Foreground="#8E8E93" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Pick a user on the left to see their effective access and roles."
+                               FontSize="13" Foreground="#AEAEB2"
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- Header -->
+                <Border Grid.Row="0" IsVisible="{Binding IsUserSelected}"
+                        Background="#F8F8FA" BorderBrush="#E5E5EA"
+                        BorderThickness="0,0,0,1" Padding="16,10">
+                    <StackPanel Spacing="2" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding SelectedUser.Title}"
+                                   FontSize="14" FontWeight="SemiBold" Foreground="#1C1C1E"/>
+                        <TextBlock Text="{Binding SelectedUser.Secondary}"
+                                   FontSize="11" Foreground="#636366"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Tabs: Effective access | Roles -->
+                <TabControl Grid.Row="1" IsVisible="{Binding IsUserSelected}"
+                            SelectedIndex="{Binding DetailTabIndex}"
+                            Padding="0" Margin="0">
+
+                    <!-- ══ Effective access (matrix) ════════════════ -->
+                    <TabItem>
+                        <TabItem.Header><TextBlock Text="Effective access" FontSize="13"/></TabItem.Header>
+                        <DockPanel>
+                            <!-- Filter + legend + status -->
+                            <Border DockPanel.Dock="Top" Padding="14,8" ClipToBounds="True"
+                                    Background="#FBFBFD" BorderBrush="#E5E5EA" BorderThickness="0,0,0,1">
+                                <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto">
+                                    <TextBox Grid.Column="0"
+                                             PlaceholderText="Filter tables…"
+                                             Text="{Binding PrivilegeFilterText}"
+                                             Width="200" VerticalAlignment="Center"/>
+                                    <CheckBox Grid.Column="1" Content="Only accessible"
+                                              IsChecked="{Binding ShowOnlyAssigned}"
+                                              FontSize="12" VerticalAlignment="Center"
+                                              Margin="12,0,0,0"/>
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4"
+                                                VerticalAlignment="Center" Margin="14,0,0,0">
+                                        <Border Background="#E7F7EC" CornerRadius="4" Padding="5,1">
+                                            <TextBlock Text="User" FontSize="9" FontWeight="SemiBold" Foreground="#1E7A37"/>
+                                        </Border>
+                                        <Border Background="#DBF1F6" CornerRadius="4" Padding="5,1">
+                                            <TextBlock Text="BU" FontSize="9" FontWeight="SemiBold" Foreground="#0B6B79"/>
+                                        </Border>
+                                        <Border Background="#E2EAFF" CornerRadius="4" Padding="5,1">
+                                            <TextBlock Text="P:C" FontSize="9" FontWeight="SemiBold" Foreground="#1A40C2"/>
+                                        </Border>
+                                        <Border Background="#D9EEDD" CornerRadius="4" Padding="5,1">
+                                            <TextBlock Text="Org" FontSize="9" FontWeight="SemiBold" Foreground="#10672A"/>
+                                        </Border>
+                                        <Border Background="#F2F2F7" CornerRadius="4" Padding="5,1">
+                                            <TextBlock Text="None" FontSize="9" FontWeight="SemiBold" Foreground="#AEAEB2"/>
+                                        </Border>
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="4" Text="{Binding AccessStatus}"
+                                               FontSize="11" Foreground="#636366"
+                                               VerticalAlignment="Center" Margin="12,0,0,0"
+                                               MaxWidth="280" TextTrimming="CharacterEllipsis"/>
+                                </Grid>
+                            </Border>
+
+                            <ProgressBar DockPanel.Dock="Top" IsIndeterminate="True"
+                                         IsVisible="{Binding IsAccessLoading}"
+                                         Height="2" Margin="0"/>
+
+                            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                                          VerticalScrollBarVisibility="Disabled">
+                                <DockPanel Width="950">
+                                    <Grid DockPanel.Dock="Top" Height="30" Background="#FAFAFB"
+                                          ColumnDefinitions="170,150,70,70,70,70,70,70,70,70,70">
+                                        <TextBlock Grid.Column="0" Text="TABLE" Margin="14,0,0,0"
+                                                   FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1" Text="LOGICAL NAME"
+                                                   FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="2" Text="OWNER" HorizontalAlignment="Center"
+                                                   FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="3" Text="CREATE" HorizontalAlignment="Center"
+                                                   FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="4" Text="READ" HorizontalAlignment="Center"
+                                                   FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="5" Text="WRITE" HorizontalAlignment="Center"
+                                                   FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="6" Text="DELETE" HorizontalAlignment="Center"
+                                                   FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="7" Text="APPEND" HorizontalAlignment="Center"
+                                                   FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="8" Text="APP TO" HorizontalAlignment="Center"
+                                                   FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="9" Text="ASSIGN" HorizontalAlignment="Center"
+                                                   FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="10" Text="SHARE" HorizontalAlignment="Center"
+                                                   FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93" VerticalAlignment="Center"/>
+                                    </Grid>
+
+                                    <ListBox ItemsSource="{Binding Privileges}"
+                                             Background="Transparent" BorderThickness="0" Padding="0"
+                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate x:DataType="models:PrivilegeRow">
+                                                <Grid Height="32" Width="950"
+                                                      ColumnDefinitions="170,150,70,70,70,70,70,70,70,70,70">
+                                                    <TextBlock Grid.Column="0" Text="{Binding Title}"
+                                                               FontSize="12" Foreground="#1C1C1E"
+                                                               VerticalAlignment="Center" ClipToBounds="True"
+                                                               TextTrimming="CharacterEllipsis" Margin="14,0,6,0"/>
+                                                    <TextBlock Grid.Column="1" Text="{Binding LogicalName}"
+                                                               FontSize="11" Foreground="#636366"
+                                                               FontFamily="SF Mono,Menlo,monospace"
+                                                               VerticalAlignment="Center" ClipToBounds="True"
+                                                               TextTrimming="CharacterEllipsis" Margin="0,0,6,0"/>
+                                                    <TextBlock Grid.Column="2" Text="{Binding Owner}"
+                                                               FontSize="10" Foreground="#8E8E93"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+
+                                                    <Border Grid.Column="3" Background="{Binding Create.Color}"
+                                                            IsVisible="{Binding Create.Applicable}"
+                                                            CornerRadius="4" Height="20" Margin="4,0"
+                                                            VerticalAlignment="Center" ToolTip.Tip="{Binding Create.Full}">
+                                                        <TextBlock Text="{Binding Create.Short}" FontSize="9" FontWeight="SemiBold"
+                                                                   Foreground="{Binding Create.TextColor}"
+                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                    <Border Grid.Column="4" Background="{Binding Read.Color}"
+                                                            IsVisible="{Binding Read.Applicable}"
+                                                            CornerRadius="4" Height="20" Margin="4,0"
+                                                            VerticalAlignment="Center" ToolTip.Tip="{Binding Read.Full}">
+                                                        <TextBlock Text="{Binding Read.Short}" FontSize="9" FontWeight="SemiBold"
+                                                                   Foreground="{Binding Read.TextColor}"
+                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                    <Border Grid.Column="5" Background="{Binding Write.Color}"
+                                                            IsVisible="{Binding Write.Applicable}"
+                                                            CornerRadius="4" Height="20" Margin="4,0"
+                                                            VerticalAlignment="Center" ToolTip.Tip="{Binding Write.Full}">
+                                                        <TextBlock Text="{Binding Write.Short}" FontSize="9" FontWeight="SemiBold"
+                                                                   Foreground="{Binding Write.TextColor}"
+                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                    <Border Grid.Column="6" Background="{Binding Delete.Color}"
+                                                            IsVisible="{Binding Delete.Applicable}"
+                                                            CornerRadius="4" Height="20" Margin="4,0"
+                                                            VerticalAlignment="Center" ToolTip.Tip="{Binding Delete.Full}">
+                                                        <TextBlock Text="{Binding Delete.Short}" FontSize="9" FontWeight="SemiBold"
+                                                                   Foreground="{Binding Delete.TextColor}"
+                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                    <Border Grid.Column="7" Background="{Binding Append.Color}"
+                                                            IsVisible="{Binding Append.Applicable}"
+                                                            CornerRadius="4" Height="20" Margin="4,0"
+                                                            VerticalAlignment="Center" ToolTip.Tip="{Binding Append.Full}">
+                                                        <TextBlock Text="{Binding Append.Short}" FontSize="9" FontWeight="SemiBold"
+                                                                   Foreground="{Binding Append.TextColor}"
+                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                    <Border Grid.Column="8" Background="{Binding AppendTo.Color}"
+                                                            IsVisible="{Binding AppendTo.Applicable}"
+                                                            CornerRadius="4" Height="20" Margin="4,0"
+                                                            VerticalAlignment="Center" ToolTip.Tip="{Binding AppendTo.Full}">
+                                                        <TextBlock Text="{Binding AppendTo.Short}" FontSize="9" FontWeight="SemiBold"
+                                                                   Foreground="{Binding AppendTo.TextColor}"
+                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                    <Border Grid.Column="9" Background="{Binding Assign.Color}"
+                                                            IsVisible="{Binding Assign.Applicable}"
+                                                            CornerRadius="4" Height="20" Margin="4,0"
+                                                            VerticalAlignment="Center" ToolTip.Tip="{Binding Assign.Full}">
+                                                        <TextBlock Text="{Binding Assign.Short}" FontSize="9" FontWeight="SemiBold"
+                                                                   Foreground="{Binding Assign.TextColor}"
+                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                    <Border Grid.Column="10" Background="{Binding Share.Color}"
+                                                            IsVisible="{Binding Share.Applicable}"
+                                                            CornerRadius="4" Height="20" Margin="4,0"
+                                                            VerticalAlignment="Center" ToolTip.Tip="{Binding Share.Full}">
+                                                        <TextBlock Text="{Binding Share.Short}" FontSize="9" FontWeight="SemiBold"
+                                                                   Foreground="{Binding Share.TextColor}"
+                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                        <ListBox.Styles>
+                                            <Style Selector="ListBoxItem">
+                                                <Setter Property="Padding" Value="0"/>
+                                            </Style>
+                                            <Style Selector="ListBoxItem:nth-child(2n) /template/ ContentPresenter">
+                                                <Setter Property="Background" Value="#FAFAFB"/>
+                                            </Style>
+                                            <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
+                                                <Setter Property="Background" Value="#0F000000"/>
+                                            </Style>
+                                            <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+                                                <Setter Property="Background" Value="{DynamicResource TintBrush}"/>
+                                            </Style>
+                                        </ListBox.Styles>
+                                    </ListBox>
+                                </DockPanel>
+                            </ScrollViewer>
+                        </DockPanel>
+                    </TabItem>
+
+                    <!-- ══ Roles ════════════════════════════════════ -->
+                    <TabItem>
+                        <TabItem.Header><TextBlock Text="Roles" FontSize="13"/></TabItem.Header>
+                        <DockPanel>
+                            <Border DockPanel.Dock="Top" Padding="14,8"
+                                    Background="#FBFBFD" BorderBrush="#E5E5EA" BorderThickness="0,0,0,1">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Grid.Column="0" Text="{Binding RolesStatus}"
+                                               FontSize="11" Foreground="#636366"
+                                               VerticalAlignment="Center"/>
+                                    <ProgressBar Grid.Column="1" IsIndeterminate="True"
+                                                 IsVisible="{Binding IsRolesLoading}"
+                                                 Width="60" Height="3" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                            <Grid DockPanel.Dock="Top" ColumnDefinitions="90,1.6*,1.4*"
+                                  Background="#FAFAFB" Height="28">
+                                <TextBlock Grid.Column="0" Text="SOURCE" Margin="16,0,0,0"
+                                           FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93"
+                                           VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="ROLE" FontSize="10"
+                                           FontWeight="SemiBold" Foreground="#8E8E93"
+                                           VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="2" Text="BUSINESS UNIT" FontSize="10"
+                                           FontWeight="SemiBold" Foreground="#8E8E93"
+                                           VerticalAlignment="Center"/>
+                            </Grid>
+                            <ListBox ItemsSource="{Binding Roles}"
+                                     Background="Transparent" BorderThickness="0" Padding="0"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:UserRoleItem">
+                                        <Grid ColumnDefinitions="90,1.6*,1.4*" Height="34">
+                                            <Border Grid.Column="0" Background="{Binding SourceColor}"
+                                                    CornerRadius="4" Padding="5,1"
+                                                    HorizontalAlignment="Left" VerticalAlignment="Center"
+                                                    Margin="16,0,0,0">
+                                                <TextBlock Text="{Binding SourceBadge}" FontSize="8"
+                                                           FontWeight="Bold" Foreground="White"/>
+                                            </Border>
+                                            <TextBlock Grid.Column="1" Text="{Binding Name}"
+                                                       FontSize="12" Foreground="#1C1C1E"
+                                                       VerticalAlignment="Center" ClipToBounds="True"
+                                                       TextTrimming="CharacterEllipsis" Margin="0,0,6,0"/>
+                                            <TextBlock Grid.Column="2" Text="{Binding BusinessUnit}"
+                                                       FontSize="12" Foreground="#636366"
+                                                       VerticalAlignment="Center" ClipToBounds="True"
+                                                       TextTrimming="CharacterEllipsis" Margin="0,0,16,0"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                                <ListBox.Styles>
+                                    <Style Selector="ListBoxItem">
+                                        <Setter Property="Padding" Value="0"/>
+                                    </Style>
+                                    <Style Selector="ListBoxItem:nth-child(2n) /template/ ContentPresenter">
+                                        <Setter Property="Background" Value="#FAFAFB"/>
+                                    </Style>
+                                    <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
+                                        <Setter Property="Background" Value="#0F000000"/>
+                                    </Style>
+                                    <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+                                        <Setter Property="Background" Value="{DynamicResource TintBrush}"/>
+                                    </Style>
+                                </ListBox.Styles>
+                            </ListBox>
+                        </DockPanel>
+                    </TabItem>
+                </TabControl>
+            </Grid>
+        </Grid>
+    </Grid>
+</UserControl>

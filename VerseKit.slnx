@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/plugins/">
+    <Project Path="plugins/AccessChecker/AccessChecker.csproj" />
     <Project Path="plugins/ResourceManager/ResourceManager.csproj" />
     <Project Path="plugins/SecurityRoles/SecurityRoles.csproj" />
     <Project Path="plugins/TableBrowser/TableBrowser.csproj" />
