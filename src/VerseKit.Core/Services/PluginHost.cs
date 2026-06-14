@@ -16,8 +16,9 @@ public sealed class PluginHost(ILogger<PluginHost> logger) : IDisposable
     public IReadOnlyList<PluginEntry> LoadedPlugins =>
         _loaded.Select(x => x.Entry).ToList();
 
-    /// <summary>Scans <paramref name="pluginDirectory"/> for plugin assemblies and loads them.</summary>
-    public async Task DiscoverAsync(string pluginDirectory, CancellationToken ct)
+    /// <summary>Scans <paramref name="pluginDirectory"/> for plugin assemblies and loads them,
+    /// tagging each with <paramref name="origin"/>.</summary>
+    public async Task DiscoverAsync(string pluginDirectory, PluginOrigin origin, CancellationToken ct)
     {
         // Touch IVerseKitPlugin here to guarantee VerseKit.PluginSdk is materialised in
         // AssemblyLoadContext.Default BEFORE any PluginLoadContext is created.
@@ -48,7 +49,7 @@ public sealed class PluginHost(ILogger<PluginHost> logger) : IDisposable
 
             try
             {
-                await LoadPluginAssemblyAsync(candidate, ct);
+                await LoadPluginAssemblyAsync(candidate, origin, ct);
             }
             catch (System.Reflection.ReflectionTypeLoadException rtle)
             {
@@ -65,7 +66,7 @@ public sealed class PluginHost(ILogger<PluginHost> logger) : IDisposable
         logger.LogInformation("Plugin discovery complete. {Count} plugin(s) loaded.", _loaded.Count);
     }
 
-    private Task LoadPluginAssemblyAsync(string assemblyPath, CancellationToken ct)
+    private Task LoadPluginAssemblyAsync(string assemblyPath, PluginOrigin origin, CancellationToken ct)
     {
         var context = new PluginLoadContext(assemblyPath);
         var assembly = context.LoadFromAssemblyPath(assemblyPath);
@@ -78,7 +79,7 @@ public sealed class PluginHost(ILogger<PluginHost> logger) : IDisposable
             if (Activator.CreateInstance(type) is not IVerseKitPlugin plugin)
                 continue;
 
-            var entry = new PluginEntry { Plugin = plugin, AssemblyPath = assemblyPath };
+            var entry = new PluginEntry { Plugin = plugin, AssemblyPath = assemblyPath, Origin = origin };
             _loaded.Add((context, entry));
             logger.LogInformation("Loaded plugin '{Name}' v{Version} from '{Path}'",
                 plugin.Name, plugin.Version, assemblyPath);
@@ -106,6 +107,24 @@ public sealed class PluginHost(ILogger<PluginHost> logger) : IDisposable
 
         await entry.Plugin.CleanupAsync();
         entry.IsActivated = false;
+    }
+
+    /// <summary>
+    /// Cleans up and unloads every loaded plugin and clears the list, so callers
+    /// can rescan from disk (e.g. after install/remove). The collectible load
+    /// contexts release their assemblies, freeing the files for deletion/replace.
+    /// </summary>
+    public async Task ResetAsync()
+    {
+        foreach (var (context, entry) in _loaded)
+        {
+            try { await entry.Plugin.CleanupAsync(); } catch { /* best effort */ }
+            context.Unload();
+        }
+        _loaded.Clear();
+        // Encourage the unloaded contexts to be collected before files are touched.
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
     }
 
     public void Dispose()

@@ -62,6 +62,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly PluginHost _pluginHost;
     private readonly ConnectionManager _connectionManager;
     private readonly UpdateService _updateService;
+    private readonly PluginCatalogService _catalog;
     private readonly ILogger<MainWindowViewModel> _logger;
 
     // Connection
@@ -97,7 +98,28 @@ public partial class MainWindowViewModel : ViewModelBase
     private UpdateInfo? _pendingUpdate;
 
     public ConnectionViewModel ConnectionForm { get; }
+
+    /// <summary>Enabled plugins shown in the sidebar TOOLS list.</summary>
     public ObservableCollection<PluginEntry> Plugins { get; } = [];
+
+    /// <summary>All discovered plugins (enabled + disabled) for the manager sheet.</summary>
+    public ObservableCollection<PluginItemViewModel> PluginItems { get; } = [];
+
+    [ObservableProperty] private bool _isPluginsPanelVisible;
+    [ObservableProperty] private string? _pluginStatus;
+
+    /// <summary>Set by the view to pick a folder to install (TopLevel.StorageProvider).</summary>
+    public Func<Task<string?>>? PickFolderAsync { get; set; }
+
+    private string _userPluginRoot = "";
+    private string _bundledPluginRoot = "";
+    private HashSet<Guid> _disabledPlugins = [];
+
+    /// <summary>Plugins available to install from the registry.</summary>
+    public ObservableCollection<PluginCatalogItemViewModel> CatalogItems { get; } = [];
+
+    [ObservableProperty] private bool _isCatalogLoading;
+    [ObservableProperty] private string? _catalogStatus;
 
     /// <summary>Flat list of all connections, kept for IsActive bookkeeping.</summary>
     public ObservableCollection<SavedConnectionItem> SavedProfiles { get; } = [];
@@ -109,8 +131,8 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>Set by the view to prompt for a folder name (new / rename).</summary>
     public Func<string, string, string?, Task<string?>>? PromptTextAsync { get; set; }
 
-    /// <summary>Set by the view to confirm folder deletion.</summary>
-    public Func<string, string, Task<bool>>? ConfirmAsync { get; set; }
+    /// <summary>Set by the view to confirm an action. Args: title, message, confirm-button label.</summary>
+    public Func<string, string, string, Task<bool>>? ConfirmAsync { get; set; }
 
     public string AppVersion => $"v{UpdateService.CurrentVersion.ToString(3)}";
 
@@ -119,11 +141,13 @@ public partial class MainWindowViewModel : ViewModelBase
         ConnectionManager connectionManager,
         ConnectionViewModel connectionForm,
         UpdateService updateService,
+        PluginCatalogService catalog,
         ILogger<MainWindowViewModel> logger)
     {
         _pluginHost = pluginHost;
         _connectionManager = connectionManager;
         _updateService = updateService;
+        _catalog = catalog;
         _logger = logger;
         ConnectionForm = connectionForm;
 
@@ -175,6 +199,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _pluginHost = null!;
         _connectionManager = null!;
         _updateService = null!;
+        _catalog = null!;
         _logger = null!;
         ConnectionForm = null!;
         ConnectionStatus = "Connected: Demo Org";
@@ -297,25 +322,50 @@ public partial class MainWindowViewModel : ViewModelBase
         // Load saved connection profiles
         await RefreshSavedProfilesAsync(ct);
 
-        // User-installed plugins
-        var userPluginDir = Path.Combine(
+        _userPluginRoot = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
             ".local", "share", "versekit", "plugins");
-
         // Plugins bundled inside the .app bundle (Contents/MacOS/../Resources/plugins)
-        var bundledPluginDir = Path.GetFullPath(
+        _bundledPluginRoot = Path.GetFullPath(
             Path.Combine(AppContext.BaseDirectory, "..", "Resources", "plugins"));
 
-        await _pluginHost.DiscoverAsync(userPluginDir, ct);
+        _disabledPlugins = PluginPreferences.LoadDisabled();
 
-        if (Directory.Exists(bundledPluginDir))
-            await _pluginHost.DiscoverAsync(bundledPluginDir, ct);
+        await DiscoverAllAsync(ct);
+        RebuildPluginLists();
+    }
 
-        var seenIds = new HashSet<Guid>();
+    /// <summary>Resets the host and re-discovers both roots (user first so a user
+    /// copy shadows a bundled plugin of the same id).</summary>
+    private async Task DiscoverAllAsync(CancellationToken ct)
+    {
+        await _pluginHost.ResetAsync();
+
+        Directory.CreateDirectory(_userPluginRoot);
+        await _pluginHost.DiscoverAsync(_userPluginRoot, PluginOrigin.User, ct);
+
+        if (Directory.Exists(_bundledPluginRoot))
+            await _pluginHost.DiscoverAsync(_bundledPluginRoot, PluginOrigin.Bundled, ct);
+    }
+
+    /// <summary>Rebuilds the manager list (all plugins) and the sidebar tool list
+    /// (enabled only) from the host's currently-loaded plugins.</summary>
+    private void RebuildPluginLists()
+    {
+        // The previously-open tool view belongs to a now-unloaded context.
+        SelectedPlugin = null;
+        ActivePluginView = null;
+        Plugins.Clear();
+        PluginItems.Clear();
+
+        var seen = new HashSet<Guid>();
         foreach (var entry in _pluginHost.LoadedPlugins)
         {
-            if (seenIds.Add(entry.Plugin.PluginId))
-                Plugins.Add(entry);
+            if (!seen.Add(entry.Plugin.PluginId)) continue;
+
+            var enabled = !_disabledPlugins.Contains(entry.Plugin.PluginId);
+            PluginItems.Add(new PluginItemViewModel(entry, enabled) { EnabledChanged = OnPluginEnabledToggled });
+            if (enabled) Plugins.Add(entry);
         }
     }
 
@@ -384,7 +434,8 @@ public partial class MainWindowViewModel : ViewModelBase
         var ok = ConfirmAsync is null || await ConfirmAsync(
             "Delete folder?",
             $"'{folder.Name}' will be removed. Its {folder.Connections.Count} connection(s) " +
-            "move to the top level — they are not deleted.");
+            "move to the top level — they are not deleted.",
+            "Delete");
         if (!ok) return;
         await _connectionManager.DeleteFolderAsync(folder.Name, CancellationToken.None);
         await RefreshSavedProfilesAsync(CancellationToken.None);
@@ -396,6 +447,216 @@ public partial class MainWindowViewModel : ViewModelBase
         if (item is null) return;
         await _connectionManager.MoveProfileToFolderAsync(item.Name, folder, CancellationToken.None);
         await RefreshSavedProfilesAsync(CancellationToken.None);
+    }
+
+    // ── Plugins manager ──────────────────────────────────────────────
+
+    [RelayCommand]
+    private void OpenPluginsManager()
+    {
+        PluginStatus = null;
+        IsPluginsPanelVisible = true;
+        _ = LoadCatalogAsync(CancellationToken.None);
+    }
+
+    [RelayCommand]
+    private void TogglePluginsPanel() => IsPluginsPanelVisible = !IsPluginsPanelVisible;
+
+    [RelayCommand]
+    private void OpenPluginsFolder()
+    {
+        try
+        {
+            Directory.CreateDirectory(_userPluginRoot);
+            Process.Start(new ProcessStartInfo(_userPluginRoot) { UseShellExecute = true });
+        }
+        catch (Exception ex) { _logger.LogWarning(ex, "Failed to open plugins folder"); }
+    }
+
+    [RelayCommand]
+    private async Task RescanPluginsAsync()
+    {
+        await DiscoverAllAsync(CancellationToken.None);
+        RebuildPluginLists();
+        PluginStatus = $"{PluginItems.Count} plugin(s) found.";
+    }
+
+    [RelayCommand]
+    private async Task InstallPluginAsync()
+    {
+        if (PickFolderAsync is null) return;
+        var folder = await PickFolderAsync();
+        if (string.IsNullOrWhiteSpace(folder)) return;
+
+        // Convention: a plugin folder "Name" contains "Name.dll".
+        var name = Path.GetFileName(folder.TrimEnd('/', '\\'));
+        if (string.IsNullOrWhiteSpace(name) || !File.Exists(Path.Combine(folder, $"{name}.dll")))
+        {
+            PluginStatus = $"That folder doesn't look like a plugin — expected {name}/{name}.dll.";
+            return;
+        }
+
+        var proceed = ConfirmAsync is null || await ConfirmAsync(
+            "Install plugin?",
+            $"'{name}' will run in-process with full access to your environments. " +
+            "Only install plugins you trust.",
+            "Install");
+        if (!proceed) return;
+
+        try
+        {
+            // Unload everything first so existing files aren't locked on overwrite.
+            await _pluginHost.ResetAsync();
+            var dest = Path.Combine(_userPluginRoot, name);
+            if (Directory.Exists(dest)) Directory.Delete(dest, recursive: true);
+            CopyDirectory(folder, dest);
+
+            await DiscoverAllAsync(CancellationToken.None);
+            RebuildPluginLists();
+            PluginStatus = $"Installed '{name}'.";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to install plugin from '{Folder}'", folder);
+            PluginStatus = $"Install failed: {ex.Message}";
+            await DiscoverAllAsync(CancellationToken.None);
+            RebuildPluginLists();
+        }
+    }
+
+    [RelayCommand]
+    private async Task RemovePluginAsync(PluginItemViewModel? item)
+    {
+        if (item is null || !item.IsRemovable) return;
+
+        var ok = ConfirmAsync is null || await ConfirmAsync(
+            "Remove plugin?",
+            $"'{item.Name}' will be deleted from the plugins folder.",
+            "Remove");
+        if (!ok) return;
+
+        var dir = item.Entry.PluginDirectory;
+        try
+        {
+            await _pluginHost.ResetAsync();
+            if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true);
+
+            _disabledPlugins.Remove(item.Entry.Plugin.PluginId);
+            PluginPreferences.SaveDisabled(_disabledPlugins);
+
+            await DiscoverAllAsync(CancellationToken.None);
+            RebuildPluginLists();
+            PluginStatus = $"Removed '{item.Name}'.";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to remove plugin '{Name}'", item.Name);
+            PluginStatus = $"Remove failed: {ex.Message}";
+            await DiscoverAllAsync(CancellationToken.None);
+            RebuildPluginLists();
+        }
+    }
+
+    /// <summary>Row toggle handler: persist the disabled set and add/remove the
+    /// plugin from the sidebar live (the assembly stays loaded until restart).</summary>
+    private void OnPluginEnabledToggled(PluginItemViewModel item)
+    {
+        var id = item.Entry.Plugin.PluginId;
+        if (item.IsEnabled) _disabledPlugins.Remove(id);
+        else _disabledPlugins.Add(id);
+        PluginPreferences.SaveDisabled(_disabledPlugins);
+
+        var inSidebar = Plugins.FirstOrDefault(p => p.Plugin.PluginId == id);
+        if (item.IsEnabled && inSidebar is null)
+        {
+            Plugins.Add(item.Entry);
+        }
+        else if (!item.IsEnabled && inSidebar is not null)
+        {
+            if (ReferenceEquals(SelectedPlugin, inSidebar))
+            {
+                SelectedPlugin = null;
+                ActivePluginView = null;
+            }
+            Plugins.Remove(inSidebar);
+        }
+    }
+
+    private static void CopyDirectory(string source, string dest)
+    {
+        Directory.CreateDirectory(dest);
+        foreach (var file in Directory.GetFiles(source))
+            File.Copy(file, Path.Combine(dest, Path.GetFileName(file)), overwrite: true);
+        foreach (var sub in Directory.GetDirectories(source))
+            CopyDirectory(sub, Path.Combine(dest, Path.GetFileName(sub)));
+    }
+
+    // ── Plugin catalog (registry) ────────────────────────────────────
+
+    private async Task LoadCatalogAsync(CancellationToken ct)
+    {
+        if (IsCatalogLoading) return;
+        IsCatalogLoading = true;
+        CatalogStatus = null;
+        try
+        {
+            var entries = await _catalog.FetchAsync(ct);
+            CatalogItems.Clear();
+            foreach (var e in entries)
+                CatalogItems.Add(new PluginCatalogItemViewModel(e));
+            RefreshCatalogStates();
+            if (CatalogItems.Count == 0)
+                CatalogStatus = "No plugins available (couldn't reach the registry).";
+        }
+        finally
+        {
+            IsCatalogLoading = false;
+        }
+    }
+
+    /// <summary>Marks each catalog item installed/updatable against the loaded plugins.</summary>
+    private void RefreshCatalogStates()
+    {
+        foreach (var item in CatalogItems)
+        {
+            var installed = PluginItems.FirstOrDefault(p =>
+                p.Entry.Plugin.PluginId.ToString().Equals(item.Entry.Id, StringComparison.OrdinalIgnoreCase));
+            item.IsInstalled = installed is not null;
+            item.IsUpdateAvailable = installed is not null
+                && Version.TryParse(item.Entry.Version, out var avail)
+                && Version.TryParse(installed.Entry.Plugin.Version, out var cur)
+                && avail > cur;
+        }
+    }
+
+    [RelayCommand]
+    private async Task InstallFromCatalogAsync(PluginCatalogItemViewModel? item)
+    {
+        if (item is null || !item.CanInstall) return;
+
+        item.IsBusy = true;
+        CatalogStatus = $"Installing {item.Name}…";
+        try
+        {
+            await _pluginHost.ResetAsync();
+            await _catalog.InstallAsync(item.Entry, _userPluginRoot, progress: null, ct: CancellationToken.None);
+            await DiscoverAllAsync(CancellationToken.None);
+            RebuildPluginLists();
+            RefreshCatalogStates();
+            CatalogStatus = $"Installed {item.Name}.";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to install '{Name}' from catalog", item.Name);
+            CatalogStatus = $"Install failed: {ex.Message}";
+            await DiscoverAllAsync(CancellationToken.None);
+            RebuildPluginLists();
+            RefreshCatalogStates();
+        }
+        finally
+        {
+            item.IsBusy = false;
+        }
     }
 
     // ── Settings & updates ───────────────────────────────────────────

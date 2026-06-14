@@ -79,6 +79,7 @@ public partial class App : Application
         services.AddSingleton<PluginHost>();
 
         services.AddSingleton<UpdateService>();
+        services.AddSingleton<PluginCatalogService>();
         services.AddSingleton<ConnectionViewModel>();
         services.AddSingleton<MainWindowViewModel>();
 

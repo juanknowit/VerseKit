@@ -252,10 +252,16 @@
                                Opacity="0.12"
                                Fill="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
 
-                    <!-- TOOLS section header -->
-                    <TextBlock DockPanel.Dock="Top"
-                               Text="TOOLS"
-                               Classes="SidebarHeader"/>
+                    <!-- TOOLS section header + plugin-manager entry -->
+                    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0" Text="TOOLS" Classes="SidebarHeader"/>
+                        <Button Grid.Column="1" Classes="DeleteBtn"
+                                Margin="0,12,12,0"
+                                Command="{Binding OpenPluginsManagerCommand}"
+                                ToolTip.Tip="Manage plugins">
+                            <TextBlock Text="Manage" FontSize="11" Foreground="#8E8E93"/>
+                        </Button>
+                    </Grid>
 
                     <!-- Hint shown until a connection is active -->
                     <TextBlock DockPanel.Dock="Top"
@@ -730,6 +736,183 @@
                             </StackPanel>
 
                         </StackPanel>
+                    </Border>
+                </Panel>
+
+                <!-- ── Plugins manager overlay ─────────────────────────
+                     Dim-less modal sheet, same pattern as Settings. -->
+                <Panel IsVisible="{Binding IsPluginsPanelVisible}" ZIndex="70">
+
+                    <Border Classes="FormCard"
+                            Width="560" MaxHeight="640"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center">
+                        <DockPanel>
+
+                            <!-- Header -->
+                            <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+                                <TextBlock Grid.Column="0" Text="Plugins"
+                                           FontSize="17" FontWeight="SemiBold"
+                                           Foreground="#1C1C1E" VerticalAlignment="Center"/>
+                                <Button Grid.Column="1" Classes="IconBtn"
+                                        Command="{Binding TogglePluginsPanelCommand}"
+                                        ToolTip.Tip="Close">
+                                    <TextBlock Text="✕" FontSize="14" Foreground="#8E8E93"/>
+                                </Button>
+                            </Grid>
+
+                            <Rectangle DockPanel.Dock="Top" Height="1" Fill="#E5E5EA" Margin="-28,0,-28,12"/>
+
+                            <!-- Actions -->
+                            <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,Auto,*,Auto" Margin="0,0,0,8">
+                                <Button Grid.Column="0" Classes="Primary"
+                                        Content="Install Plugin…"
+                                        Command="{Binding InstallPluginCommand}"/>
+                                <Button Grid.Column="1" Margin="8,0,0,0"
+                                        Content="Open Plugins Folder"
+                                        Command="{Binding OpenPluginsFolderCommand}"/>
+                                <Button Grid.Column="3"
+                                        Content="Rescan"
+                                        Command="{Binding RescanPluginsCommand}"/>
+                            </Grid>
+
+                            <TextBlock DockPanel.Dock="Top"
+                                       Text="Plugins run in-process with full access to your environments. Only install plugins you trust."
+                                       FontSize="11.5" Foreground="#8E8E93"
+                                       TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                            <!-- Status -->
+                            <Border DockPanel.Dock="Top"
+                                    Background="#F2F2F7" CornerRadius="8" Padding="12,8" Margin="0,0,0,10"
+                                    IsVisible="{Binding PluginStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                <TextBlock Text="{Binding PluginStatus}" FontSize="12"
+                                           Foreground="#3C3C43" TextWrapping="Wrap"/>
+                            </Border>
+
+                            <!-- Installed + available, scrolled together -->
+                            <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                                <StackPanel Spacing="8">
+
+                                    <TextBlock Text="INSTALLED" FontSize="11" FontWeight="SemiBold"
+                                               Foreground="#6E6E73" LetterSpacing="0.6" Margin="2,0,0,2"/>
+
+                                    <ItemsControl ItemsSource="{Binding PluginItems}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:PluginItemViewModel">
+                                            <Border Background="White"
+                                                    BorderBrush="#ECECEF" BorderThickness="1"
+                                                    CornerRadius="12" Padding="12,10" Margin="0,0,0,8">
+                                                <DockPanel LastChildFill="True">
+
+                                                    <!-- Icon -->
+                                                    <Border DockPanel.Dock="Left"
+                                                            Width="34" Height="34" CornerRadius="9"
+                                                            Margin="0,0,12,0"
+                                                            Background="{DynamicResource AccentBrush}">
+                                                        <TextBlock Text="{Binding Initials}"
+                                                                   Foreground="White" FontWeight="Bold" FontSize="13"
+                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+
+                                                    <!-- Enable toggle (far right) -->
+                                                    <ToggleSwitch DockPanel.Dock="Right"
+                                                                  OnContent="" OffContent=""
+                                                                  MinWidth="0"
+                                                                  VerticalAlignment="Center"
+                                                                  IsChecked="{Binding IsEnabled, Mode=TwoWay}"/>
+
+                                                    <!-- Remove (installed only) -->
+                                                    <Button DockPanel.Dock="Right"
+                                                            Classes="Danger" Content="Remove"
+                                                            Margin="0,0,10,0" VerticalAlignment="Center"
+                                                            IsVisible="{Binding IsRemovable}"
+                                                            Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).RemovePluginCommand}"
+                                                            CommandParameter="{Binding}"/>
+
+                                                    <!-- Name / version / origin / description -->
+                                                    <StackPanel VerticalAlignment="Center" Spacing="2">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                                            <TextBlock Text="{Binding Name}" FontSize="13.5"
+                                                                       FontWeight="Medium" Foreground="#1C1C1E"
+                                                                       VerticalAlignment="Center"/>
+                                                            <TextBlock Text="{Binding Version}" FontSize="11.5"
+                                                                       Foreground="#8E8E93" VerticalAlignment="Center"/>
+                                                            <Border Background="#EEEEF2" CornerRadius="6"
+                                                                    Padding="6,1" VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding OriginLabel}"
+                                                                           FontSize="10" Foreground="#6E6E73"/>
+                                                            </Border>
+                                                        </StackPanel>
+                                                        <TextBlock Text="{Binding Description}" FontSize="11.5"
+                                                                   Foreground="#8E8E93"
+                                                                   TextTrimming="CharacterEllipsis"/>
+                                                    </StackPanel>
+                                                </DockPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <TextBlock Text="AVAILABLE" FontSize="11" FontWeight="SemiBold"
+                                               Foreground="#6E6E73" LetterSpacing="0.6" Margin="2,8,0,2"/>
+
+                                    <TextBlock Text="Loading…" FontSize="12" Foreground="#8E8E93" Margin="2,0,0,0"
+                                               IsVisible="{Binding IsCatalogLoading}"/>
+                                    <TextBlock Text="{Binding CatalogStatus}" FontSize="12" Foreground="#8E8E93"
+                                               Margin="2,0,0,0" TextWrapping="Wrap"
+                                               IsVisible="{Binding CatalogStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                                    <ItemsControl ItemsSource="{Binding CatalogItems}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:PluginCatalogItemViewModel">
+                                                <Border Background="White"
+                                                        BorderBrush="#ECECEF" BorderThickness="1"
+                                                        CornerRadius="12" Padding="12,10" Margin="0,0,0,8">
+                                                    <DockPanel LastChildFill="True">
+
+                                                        <!-- Icon -->
+                                                        <Border DockPanel.Dock="Left"
+                                                                Width="34" Height="34" CornerRadius="9"
+                                                                Margin="0,0,12,0"
+                                                                Background="{DynamicResource AccentBrush}">
+                                                            <TextBlock Text="{Binding Initials}"
+                                                                       Foreground="White" FontWeight="Bold" FontSize="13"
+                                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Border>
+
+                                                        <!-- Install / Update / Installed -->
+                                                        <Button DockPanel.Dock="Right" Classes="Primary"
+                                                                Content="{Binding ActionLabel}"
+                                                                MinWidth="86" VerticalAlignment="Center"
+                                                                IsEnabled="{Binding CanInstall}"
+                                                                Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).InstallFromCatalogCommand}"
+                                                                CommandParameter="{Binding}"/>
+
+                                                        <!-- Name / version / author / description -->
+                                                        <StackPanel VerticalAlignment="Center" Spacing="2">
+                                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                                <TextBlock Text="{Binding Name}" FontSize="13.5"
+                                                                           FontWeight="Medium" Foreground="#1C1C1E"
+                                                                           VerticalAlignment="Center"/>
+                                                                <TextBlock Text="{Binding Version}" FontSize="11.5"
+                                                                           Foreground="#8E8E93" VerticalAlignment="Center"/>
+                                                                <TextBlock Text="{Binding Author}" FontSize="10.5"
+                                                                           Foreground="#AEAEB2" VerticalAlignment="Center"/>
+                                                            </StackPanel>
+                                                            <TextBlock Text="{Binding Description}" FontSize="11.5"
+                                                                       Foreground="#8E8E93"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                        </StackPanel>
+                                                    </DockPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                </StackPanel>
+                            </ScrollViewer>
+
+                        </DockPanel>
                     </Border>
                 </Panel>
 

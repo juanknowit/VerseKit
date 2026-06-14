@@ -33,6 +33,7 @@ public partial class MainWindow : Window
                 vm.ConnectionForm.PickCertificateAsync = PickCertificateAsync;
                 vm.PromptTextAsync = PromptTextAsync;
                 vm.ConfirmAsync = ConfirmAsync;
+                vm.PickFolderAsync = PickFolderAsync;
             }
         };
 
@@ -174,10 +175,16 @@ public partial class MainWindow : Window
         return result;
     }
 
-    /// <summary>Modal yes/no confirmation. Returns true to proceed.</summary>
-    private async Task<bool> ConfirmAsync(string title, string message)
+    /// <summary>Modal yes/no confirmation. Returns true to proceed. The confirm
+    /// button shows <paramref name="confirmLabel"/>, tinted red for destructive verbs.</summary>
+    private async Task<bool> ConfirmAsync(string title, string message, string confirmLabel)
     {
-        var ok = new Button { Content = "Delete", Foreground = new SolidColorBrush(Color.Parse("#D70015")) };
+        var destructive = confirmLabel is "Delete" or "Remove";
+        var ok = new Button { Content = confirmLabel };
+        if (destructive)
+            ok.Foreground = new SolidColorBrush(Color.Parse("#D70015"));
+        else
+            ok.Classes.Add("Primary");
         var cancel = new Button { Content = "Cancel" };
         var result = false;
 
@@ -214,6 +221,17 @@ public partial class MainWindow : Window
 
         await dialog.ShowDialog(this);
         return result;
+    }
+
+    private async Task<string?> PickFolderAsync()
+    {
+        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = "Select a plugin folder",
+            AllowMultiple = false
+        });
+
+        return folders.FirstOrDefault()?.TryGetLocalPath();
     }
 
     private async Task<string?> PickCertificateAsync()
