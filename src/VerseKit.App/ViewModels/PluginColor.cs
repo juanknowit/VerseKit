@@ -20,17 +20,33 @@ public static class PluginColor
         Color.Parse("#FF3B30"), // red
     ];
 
+    // Explicit colours for the core plugins (by id), so they read intentionally
+    // and never collide. Unknown/third-party plugins fall back to the hash.
+    private static readonly Dictionary<string, Color> Overrides = new(System.StringComparer.OrdinalIgnoreCase)
+    {
+        ["a1b2c3d4-e5f6-7890-abcd-ef1234567890"] = Color.Parse("#007AFF"), // Resource Manager → blue
+        ["b2c3d4e5-f6a7-8901-bcde-f12345678901"] = Color.Parse("#FF9500"), // Table Browser → orange
+        ["c3d4e5f6-a7b8-9012-cdef-345678901234"] = Color.Parse("#34C759"), // Security Roles → green
+    };
+
     public static IBrush For(string key)
     {
-        // FNV-1a — deterministic across processes (unlike string.GetHashCode).
-        uint hash = 2166136261;
-        foreach (var ch in key)
+        Color c;
+        if (Overrides.TryGetValue(key, out var fixedColor))
         {
-            hash ^= ch;
-            hash *= 16777619;
+            c = fixedColor;
         }
-
-        var c = Palette[hash % (uint)Palette.Length];
+        else
+        {
+            // FNV-1a — deterministic across processes (unlike string.GetHashCode).
+            uint hash = 2166136261;
+            foreach (var ch in key)
+            {
+                hash ^= ch;
+                hash *= 16777619;
+            }
+            c = Palette[hash % (uint)Palette.Length];
+        }
         // Subtle vertical sheen so the icon matches the app's pill aesthetic.
         return new LinearGradientBrush
         {
