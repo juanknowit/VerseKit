@@ -599,10 +599,9 @@
                                            MaxWidth="340"
                                            Margin="0,4,0,0"/>
                                 <Button Content="View project on GitHub"
+                                        Classes="IconBtn"
                                         Command="{Binding OpenGitHubCommand}"
-                                        Background="Transparent"
-                                        BorderThickness="0"
-                                        Padding="4,2"
+                                        Padding="8,3"
                                         Margin="0,6,0,0"
                                         FontSize="12"
                                         Foreground="{DynamicResource AccentTextBrush}"
