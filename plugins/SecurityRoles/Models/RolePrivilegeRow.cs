@@ -19,4 +19,11 @@ public sealed class RolePrivilegeRow
     public required AccessCell Share { get; init; }
 
     public string Title => string.IsNullOrWhiteSpace(Table) ? LogicalName : Table;
+
+    /// <summary>True if the role has at least one privilege granted on this table.</summary>
+    public bool HasAnyAccess =>
+        IsGranted(Create) || IsGranted(Read) || IsGranted(Write) || IsGranted(Delete)
+        || IsGranted(Append) || IsGranted(AppendTo) || IsGranted(Assign) || IsGranted(Share);
+
+    private static bool IsGranted(AccessCell cell) => cell.Applicable && cell.Short != "None";
 }

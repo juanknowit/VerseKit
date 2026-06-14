@@ -42,6 +42,7 @@ public sealed partial class SecurityRolesViewModel : ObservableObject
     [ObservableProperty] private string _membersStatus = string.Empty;
     [ObservableProperty] private string _privilegeFilterText = string.Empty;
     [ObservableProperty] private string _privilegesStatus = string.Empty;
+    [ObservableProperty] private bool _showOnlyAssigned = true;
 
     /// <summary>0 = Members, 1 = Table permissions.</summary>
     [ObservableProperty] private int _detailTabIndex;
@@ -261,16 +262,26 @@ public sealed partial class SecurityRolesViewModel : ObservableObject
 
     partial void OnPrivilegeFilterTextChanged(string value) => ApplyPrivilegeFilter();
 
+    partial void OnShowOnlyAssignedChanged(bool value) => ApplyPrivilegeFilter();
+
     private void ApplyPrivilegeFilter()
     {
         var f = PrivilegeFilterText?.Trim() ?? string.Empty;
+
+        var scoped = _allPrivilegeRows.Where(r => !ShowOnlyAssigned || r.HasAnyAccess).ToList();
+
         Privileges.Clear();
-        foreach (var r in _allPrivilegeRows.Where(r => f.Length == 0
+        foreach (var r in scoped.Where(r => f.Length == 0
                      || r.Table.Contains(f, OIC)
                      || r.LogicalName.Contains(f, OIC)))
             Privileges.Add(r);
+
         if (_allPrivilegeRows.Count > 0)
-            PrivilegesStatus = $"{Privileges.Count} of {_allPrivilegeRows.Count} table(s)";
+        {
+            var denominator = ShowOnlyAssigned ? scoped.Count : _allPrivilegeRows.Count;
+            var label = ShowOnlyAssigned ? "assigned table(s)" : "table(s)";
+            PrivilegesStatus = $"{Privileges.Count} of {denominator} {label}";
+        }
     }
 
     private async Task LoadPrivilegesAsync(RoleItem role, CancellationToken ct)
