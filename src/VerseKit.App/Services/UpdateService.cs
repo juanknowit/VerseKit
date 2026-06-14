@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -53,44 +54,25 @@ public sealed class UpdateService : IDisposable
             if (latest <= CurrentVersion)
                 return null;
 
-            // Find the macOS app zip and its optional .sha256 sidecar.
-            // Stricter naming than "any zip": must be a mac/osx zip whose
-            // name identifies this app, so we don't grab an unrelated asset.
-            string? downloadUrl = null;
-            string? downloadName = null;
-            var checksumByName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
+            // Collect the release assets, then pick the zip for THIS machine's
+            // architecture (+ its optional .sha256 sidecar).
+            var assetList = new List<(string Name, string Url)>();
             if (root.TryGetProperty("assets", out var assets))
             {
                 foreach (var asset in assets.EnumerateArray())
                 {
                     var name = asset.GetProperty("name").GetString() ?? "";
                     var url = asset.GetProperty("browser_download_url").GetString();
-                    if (url is null) continue;
-
-                    if (name.EndsWith(".sha256", StringComparison.OrdinalIgnoreCase))
-                    {
-                        // Map the zip's name → its checksum asset url.
-                        checksumByName[name[..^".sha256".Length]] = url;
-                    }
-                    else if (downloadUrl is null &&
-                             name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) &&
-                             name.Contains("versekit", StringComparison.OrdinalIgnoreCase) &&
-                             (name.Contains("osx", StringComparison.OrdinalIgnoreCase) ||
-                              name.Contains("mac", StringComparison.OrdinalIgnoreCase)))
-                    {
-                        downloadUrl = url;
-                        downloadName = name;
-                    }
+                    if (url is not null) assetList.Add((name, url));
                 }
             }
 
-            string? checksumUrl = null;
-            if (downloadName is not null)
-                checksumByName.TryGetValue(downloadName, out checksumUrl);
+            var (downloadUrl, downloadName, checksumUrl) =
+                SelectAsset(assetList, RuntimeInformation.OSArchitecture);
 
-            _logger.LogInformation("Update available: {Current} → {Latest} (checksum: {HasSum})",
-                CurrentVersion, latest, checksumUrl is not null);
+            _logger.LogInformation(
+                "Update available: {Current} → {Latest} (asset: {Asset}, checksum: {HasSum})",
+                CurrentVersion, latest, downloadName ?? "(none)", checksumUrl is not null);
             return new UpdateInfo(latest.ToString(), htmlUrl, downloadUrl, body, checksumUrl);
         }
         catch (OperationCanceledException) { throw; }
@@ -99,6 +81,44 @@ public sealed class UpdateService : IDisposable
             _logger.LogWarning(ex, "Update check failed");
             return null;
         }
+    }
+
+    /// <summary>
+    /// From a release's assets, picks the macOS zip matching <paramref name="arch"/>
+    /// (arm64 vs x64) and its optional <c>.sha256</c> sidecar. Falls back to the
+    /// first matching mac zip when no arch-specific asset exists (older releases).
+    /// Pure and static so the (previously arch-blind) selection can be unit-tested.
+    /// </summary>
+    internal static (string? Url, string? Name, string? ChecksumUrl) SelectAsset(
+        IEnumerable<(string Name, string Url)> assets, Architecture arch)
+    {
+        var archToken = arch == Architecture.X64 ? "x64" : "arm64";
+
+        var zips = new List<(string Name, string Url)>();
+        var checksumByName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var (name, url) in assets)
+        {
+            if (name.EndsWith(".sha256", StringComparison.OrdinalIgnoreCase))
+                checksumByName[name[..^".sha256".Length]] = url;
+            else if (name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) &&
+                     name.Contains("versekit", StringComparison.OrdinalIgnoreCase) &&
+                     (name.Contains("osx", StringComparison.OrdinalIgnoreCase) ||
+                      name.Contains("mac", StringComparison.OrdinalIgnoreCase)))
+                zips.Add((name, url));
+        }
+
+        // Prefer this architecture; fall back to the first mac zip so a release
+        // that only ships a single (or universal) build still updates.
+        (string Name, string Url)? chosen =
+            zips.FirstOrDefault(z => z.Name.Contains(archToken, StringComparison.OrdinalIgnoreCase));
+        if (chosen.Value.Name is null)
+            chosen = zips.Count > 0 ? zips[0] : null;
+        if (chosen is null)
+            return (null, null, null);
+
+        checksumByName.TryGetValue(chosen.Value.Name, out var checksum);
+        return (chosen.Value.Url, chosen.Value.Name, checksum);
     }
 
     /// <summary>
