@@ -1,0 +1,36 @@
+name: CI
+
+# Build and test on every push to main and every pull request.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel an in-progress run when new commits are pushed to the same ref.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: Build & Test
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore VerseKit.slnx
+
+      - name: Build (Release)
+        run: dotnet build VerseKit.slnx -c Release --no-restore
+
+      - name: Test (Release)
+        run: dotnet test VerseKit.slnx -c Release --no-build --verbosity normal
