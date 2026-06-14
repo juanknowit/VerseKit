@@ -10,7 +10,7 @@
          CI -p:Version override) so the in-app updater reports the real version.
          Do not hard-code AssemblyVersion — it overrides the tag and freezes the
          reported version. -->
-    <Version>0.5.2</Version>
+    <Version>0.5.3</Version>
   </PropertyGroup>
 
   <ItemGroup>
