@@ -12,7 +12,7 @@
         Width="1280" Height="820"
         MinWidth="900" MinHeight="600"
         TransparencyLevelHint="AcrylicBlur"
-        Background="Transparent"
+        Background="{DynamicResource WindowBackgroundBrush}"
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaTitleBarHeightHint="-1">
 
@@ -37,6 +37,7 @@
                        VerticalAlignment="Center"
                        FontSize="13"
                        FontWeight="SemiBold"
+                       Foreground="{DynamicResource TitleBarForegroundBrush}"
                        IsHitTestVisible="False"/>
             <StackPanel HorizontalAlignment="Right"
                         VerticalAlignment="Center"
@@ -46,6 +47,7 @@
                 <TextBlock Text="{Binding AppVersion}"
                            FontSize="11"
                            VerticalAlignment="Center"
+                           Foreground="{DynamicResource TitleBarForegroundBrush}"
                            Opacity="0.4"/>
 
                 <!-- Settings cog — red dot when an update is available -->
@@ -53,7 +55,7 @@
                         Command="{Binding ToggleSettingsPanelCommand}"
                         ToolTip.Tip="Settings">
                     <Panel>
-                        <TextBlock Text="⚙" FontSize="16" VerticalAlignment="Center" Foreground="White"/>
+                        <TextBlock Text="⚙" FontSize="16" VerticalAlignment="Center" Foreground="{DynamicResource TitleBarForegroundBrush}"/>
                         <Ellipse Width="7" Height="7"
                                  Fill="#FF3B30"
                                  HorizontalAlignment="Right"
@@ -74,8 +76,7 @@
             <Border Grid.Column="0"
                     Margin="8,0,6,10"
                     CornerRadius="14"
-                    Background="White"
-                    BoxShadow="0 4 24 4 #28000000">
+                    Background="White">
 
                 <DockPanel ClipToBounds="True">
 
@@ -148,14 +149,16 @@
                                 </Border>
                             </TreeDataTemplate>
 
-                            <!-- Connection leaf. Negative left margin claws back
-                                 the TreeView's wide per-level indent + reserved
-                                 expander column, keeping only a small indent. -->
+                            <!-- Connection leaf. Negative left margin claws back the
+                                 TreeView's per-level indent + reserved expander
+                                 column so the row's hover pill and content line up
+                                 flush with the "Add Connection" / "New Folder"
+                                 rows below (which are plain buttons at margin 6). -->
                             <DataTemplate DataType="vm:SavedConnectionItem"
                                           x:DataType="vm:SavedConnectionItem">
                                 <Button Classes="SidebarProfile"
                                         Classes.dragging="{Binding IsDragging}"
-                                        Margin="-22,1,6,1"
+                                        Margin="-32,1,6,1"
                                         Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).ConnectToProfileCommand}"
                                         CommandParameter="{Binding}">
                                     <Button.Styles>
@@ -221,10 +224,22 @@
                             Classes="SidebarProfile"
                             Command="{Binding NewFolderCommand}">
                         <StackPanel Orientation="Horizontal" Spacing="7">
-                            <TextBlock Text="🗀" FontSize="13" Width="8"
-                                       TextAlignment="Center"
-                                       Foreground="#8E8E93"
-                                       VerticalAlignment="Center"/>
+                            <!-- Two-tone folder glyph (lighter back panel + tab,
+                                 darker front pocket) — modern Finder-style look.
+                                 Layout width kept at the 8px icon slot so
+                                 "New Folder" stays aligned with the "Add
+                                 Connection" + and the connection rows above. -->
+                            <Viewbox Width="8" Height="11" Stretch="Uniform"
+                                     VerticalAlignment="Center">
+                                <Canvas Width="16" Height="13">
+                                    <!-- Back panel + raised tab -->
+                                    <Path Fill="#B7B7BC"
+                                          Data="M2 2 H6.2 C6.55 2 6.88 2.16 7.1 2.44 L8 3.6 H14 C14.55 3.6 15 4.05 15 4.6 V10.4 C15 10.95 14.55 11.4 14 11.4 H2 C1.45 11.4 1 10.95 1 10.4 V3 C1 2.45 1.45 2 2 2 Z"/>
+                                    <!-- Front pocket -->
+                                    <Path Fill="#8E8E93"
+                                          Data="M1 6 H15 V10.4 C15 10.95 14.55 11.4 14 11.4 H2 C1.45 11.4 1 10.95 1 10.4 Z"/>
+                                </Canvas>
+                            </Viewbox>
                             <TextBlock Text="New Folder" FontSize="13"
                                        Foreground="#8E8E93"
                                        VerticalAlignment="Center"/>
@@ -309,7 +324,6 @@
                 <Border Margin="4,0,10,10"
                         CornerRadius="14"
                         Background="White"
-                        BoxShadow="0 4 24 4 #28000000"
                         ClipToBounds="True">
 
                     <!-- Plugin workspace -->
@@ -585,11 +599,104 @@
                                         Padding="4,2"
                                         Margin="0,6,0,0"
                                         FontSize="12"
-                                        Foreground="#0066D6"
+                                        Foreground="{DynamicResource AccentTextBrush}"
                                         HorizontalAlignment="Center"/>
                             </StackPanel>
 
                             <Rectangle Height="1" Fill="#E5E5EA" Margin="-28,0"/>
+
+                            <!-- Theme — accent colour swatches -->
+                            <StackPanel Spacing="12" Margin="0,16,0,0">
+                                <TextBlock Text="THEME"
+                                           FontSize="11" FontWeight="SemiBold"
+                                           Foreground="#6E6E73" LetterSpacing="0.6"/>
+
+                                <ItemsControl ItemsSource="{Binding AccentPresets}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal" Spacing="8"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:AccentSwatchItem">
+                                            <Button Width="30" Height="30"
+                                                    Padding="0"
+                                                    CornerRadius="15"
+                                                    Background="Transparent"
+                                                    BorderThickness="0"
+                                                    ToolTip.Tip="{Binding Name}"
+                                                    Command="{Binding DataContext.SelectAccentCommand,
+                                                                       ElementName=RootWindow}"
+                                                    CommandParameter="{Binding Id}">
+                                                <Panel Width="30" Height="30">
+                                                    <!-- Ring shown around the active preset -->
+                                                    <Ellipse Width="28" Height="28"
+                                                             Stroke="{Binding SwatchBrush}"
+                                                             StrokeThickness="2"
+                                                             IsVisible="{Binding IsSelected}"/>
+                                                    <Ellipse Width="20" Height="20"
+                                                             Fill="{Binding SwatchBrush}"/>
+                                                </Panel>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+
+                            <Rectangle Height="1" Fill="#E5E5EA" Margin="-28,16,-28,0"/>
+
+                            <!-- Background — own section, header styled like THEME -->
+                            <StackPanel Spacing="12" Margin="0,16,0,0">
+                                <TextBlock Text="BACKGROUND"
+                                           FontSize="11" FontWeight="SemiBold"
+                                           Foreground="#6E6E73" LetterSpacing="0.6"/>
+                                <Border CornerRadius="9" Background="#F2F2F7"
+                                        Padding="3" HorizontalAlignment="Left">
+                                    <ItemsControl ItemsSource="{Binding BackgroundOptions}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <StackPanel Orientation="Horizontal" Spacing="3"/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.Styles>
+                                            <Style Selector="Button.seg">
+                                                <Setter Property="Background" Value="Transparent"/>
+                                                <Setter Property="BorderThickness" Value="0"/>
+                                                <Setter Property="CornerRadius" Value="7"/>
+                                                <Setter Property="Padding" Value="18,5"/>
+                                                <Setter Property="MinWidth" Value="66"/>
+                                                <Setter Property="FontSize" Value="12"/>
+                                                <Setter Property="FontWeight" Value="Medium"/>
+                                                <Setter Property="Foreground" Value="#3C3C43"/>
+                                                <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                            </Style>
+                                            <Style Selector="Button.seg:pointerover /template/ ContentPresenter">
+                                                <Setter Property="Background" Value="#0F000000"/>
+                                            </Style>
+                                            <!-- Selected pill — raised white capsule -->
+                                            <Style Selector="Button.seg.selected /template/ ContentPresenter">
+                                                <Setter Property="Background" Value="White"/>
+                                                <Setter Property="BoxShadow" Value="0 1 3 0 #22000000"/>
+                                            </Style>
+                                            <Style Selector="Button.seg.selected">
+                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                            </Style>
+                                        </ItemsControl.Styles>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:BackgroundOptionItem">
+                                                <Button Classes="seg"
+                                                        Classes.selected="{Binding IsSelected}"
+                                                        Content="{Binding Name}"
+                                                        Command="{Binding DataContext.SelectBackgroundCommand,
+                                                                           ElementName=RootWindow}"
+                                                        CommandParameter="{Binding Id}"/>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Border>
+                            </StackPanel>
+
+                            <Rectangle Height="1" Fill="#E5E5EA" Margin="-28,16,-28,0"/>
 
                             <!-- Updates -->
                             <StackPanel Spacing="10" Margin="0,16,0,0">

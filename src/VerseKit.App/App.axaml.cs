@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using VerseKit.App.Services;
+using VerseKit.App.Theming;
 using VerseKit.App.ViewModels;
 using VerseKit.App.Views;
 using VerseKit.Core.Services;
@@ -23,6 +24,12 @@ public partial class App : Application
     public override void OnFrameworkInitializationCompleted()
     {
         _services = BuildServices();
+
+        // Apply the saved accent + background before the window renders so the
+        // first frame already uses the user's chosen colour and surface.
+        // Accent first: the Theme background derives its gradient from it.
+        ThemeManager.Apply(ThemeManager.LoadSavedPreset());
+        ThemeManager.ApplyBackground(ThemeManager.LoadSavedBackground());
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {

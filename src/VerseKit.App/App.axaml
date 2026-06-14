@@ -16,6 +16,12 @@
     <Application.Resources>
         <Color x:Key="AccentColor">#007AFF</Color>
         <SolidColorBrush x:Key="AccentBrush" Color="#007AFF"/>
+        <!-- Window surface + titlebar chrome. Defaults are the Glass (acrylic)
+             look; ThemeManager overrides both at startup from the saved
+             background style. Reference via DynamicResource so they recolour
+             live when the user switches background or accent. -->
+        <SolidColorBrush x:Key="WindowBackgroundBrush" Color="Transparent"/>
+        <SolidColorBrush x:Key="TitleBarForegroundBrush" Color="White"/>
         <SolidColorBrush x:Key="AccentHoverBrush" Color="#0070EB"/>
         <SolidColorBrush x:Key="AccentPressedBrush" Color="#0062CF"/>
         <SolidColorBrush x:Key="SuccessBrush" Color="#34C759"/>
@@ -25,6 +31,12 @@
         <SolidColorBrush x:Key="TintHoverBrush" Color="#DCEAFF"/>
         <SolidColorBrush x:Key="TintPressedBrush" Color="#CBDFFA"/>
         <SolidColorBrush x:Key="AccentTextBrush" Color="#0066D6"/>
+        <!-- Text-selection wash (themeable). Note: the resource definitions
+             above are the Blue defaults; ThemeManager overrides them at startup
+             from the saved preset. Anything that should follow the accent must
+             reference these via DynamicResource (not StaticResource) so it
+             recolours live when the user picks a new preset. -->
+        <SolidColorBrush x:Key="SelectionBrush" Color="#B3D7FF"/>
         <SolidColorBrush x:Key="SuccessTintBrush" Color="#E5F6EA"/>
         <SolidColorBrush x:Key="SuccessTintHoverBrush" Color="#D7F0DF"/>
         <SolidColorBrush x:Key="SuccessTintPressedBrush" Color="#C5E8D1"/>
@@ -68,7 +80,7 @@
             <Setter Property="Padding" Value="14,8"/>
             <Setter Property="MinHeight" Value="36"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="SelectionBrush" Value="#B3D7FF"/>
+            <Setter Property="SelectionBrush" Value="{DynamicResource SelectionBrush}"/>
             <Setter Property="FocusAdorner" Value="{x:Null}"/>
         </Style>
         <Style Selector="TextBox /template/ Border#PART_BorderElement">
@@ -125,7 +137,7 @@
             <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
         </Style>
         <Style Selector="ComboBoxItem:selected /template/ ContentPresenter">
-            <Setter Property="Background" Value="{StaticResource TintBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource TintBrush}"/>
             <Setter Property="CornerRadius" Value="6"/>
         </Style>
         <Style Selector="ComboBoxItem:selected TextBlock">
@@ -249,7 +261,7 @@
         </Style>
         <!-- Selected state — Finder-style pale tint, dark text -->
         <Style Selector="ListBox.SidebarList ListBoxItem:selected /template/ ContentPresenter">
-            <Setter Property="Background" Value="{StaticResource TintBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource TintBrush}"/>
             <Setter Property="CornerRadius" Value="8"/>
         </Style>
         <Style Selector="ListBox.SidebarList ListBoxItem:selected TextBlock">
@@ -257,7 +269,7 @@
         </Style>
         <!-- Selected + focus lost — same tint, no colour jump -->
         <Style Selector="ListBox.SidebarList:not(:focus-within) ListBoxItem:selected /template/ ContentPresenter">
-            <Setter Property="Background" Value="{StaticResource TintBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource TintBrush}"/>
             <Setter Property="CornerRadius" Value="8"/>
         </Style>
         <Style Selector="ListBox.SidebarList:not(:focus-within) ListBoxItem:selected TextBlock">

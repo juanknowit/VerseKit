@@ -408,6 +408,40 @@ public partial class MainWindowViewModel : ViewModelBase
         Process.Start(new ProcessStartInfo("https://github.com/juanknowit/VerseKit")
             { UseShellExecute = true });
 
+    // ── Theme (accent colour) ────────────────────────────────────────────
+
+    /// <summary>The accent presets shown as swatches in Settings.</summary>
+    public ObservableCollection<AccentSwatchItem> AccentPresets { get; } =
+        new(Theming.AccentPreset.All.Select(p =>
+            new AccentSwatchItem(p, p.Id == Theming.ThemeManager.Current.Id)));
+
+    [RelayCommand]
+    private void SelectAccent(string? id)
+    {
+        if (string.IsNullOrEmpty(id)) return;
+
+        Theming.ThemeManager.Save(Theming.AccentPreset.ById(id));
+
+        foreach (var swatch in AccentPresets)
+            swatch.IsSelected = swatch.Id == Theming.ThemeManager.Current.Id;
+    }
+
+    /// <summary>The background-style options shown as a segmented control in Settings.</summary>
+    public ObservableCollection<BackgroundOptionItem> BackgroundOptions { get; } =
+        new(Theming.BackgroundOption.All.Select(o =>
+            new BackgroundOptionItem(o, o.Id == Theming.ThemeManager.CurrentBackground.Id)));
+
+    [RelayCommand]
+    private void SelectBackground(string? id)
+    {
+        if (string.IsNullOrEmpty(id)) return;
+
+        Theming.ThemeManager.SaveBackground(Theming.BackgroundOption.ById(id));
+
+        foreach (var option in BackgroundOptions)
+            option.IsSelected = option.Id == Theming.ThemeManager.CurrentBackground.Id;
+    }
+
     /// <summary>Silent check on startup — sets the badge on the settings cog.</summary>
     public async Task CheckForUpdatesAsync(CancellationToken ct)
     {
