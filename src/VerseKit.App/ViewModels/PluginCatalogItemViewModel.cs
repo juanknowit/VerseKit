@@ -17,6 +17,7 @@ public sealed partial class PluginCatalogItemViewModel : ObservableObject
     public string Version => $"v{Entry.Version}";
     public string Description => Entry.Description;
     public string Author => string.IsNullOrWhiteSpace(Entry.Author) ? "Unknown" : Entry.Author!;
+    public bool IsBeta => Entry.Beta;
     public IBrush IconBrush => PluginColor.For(Entry.Id);
 
     public string Initials

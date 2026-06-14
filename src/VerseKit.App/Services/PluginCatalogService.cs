@@ -14,7 +14,8 @@ public sealed record PluginRegistryEntry(
     [property: JsonPropertyName("version")] string Version,
     [property: JsonPropertyName("author")] string? Author,
     [property: JsonPropertyName("downloadUrl")] string DownloadUrl,
-    [property: JsonPropertyName("sha256")] string? Sha256);
+    [property: JsonPropertyName("sha256")] string? Sha256,
+    [property: JsonPropertyName("beta")] bool Beta = false);
 
 /// <summary>
 /// Fetches the VerseKit plugin registry (a JSON manifest in the repo) and
