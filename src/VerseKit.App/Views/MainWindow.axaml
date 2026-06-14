@@ -829,6 +829,11 @@
                                                             <TextBlock Text="{Binding Name}" FontSize="13.5"
                                                                        FontWeight="Medium" Foreground="#1C1C1E"
                                                                        VerticalAlignment="Center"/>
+                                                            <Border Background="#EFE7FE" CornerRadius="5" Padding="6,1"
+                                                                    VerticalAlignment="Center" IsVisible="{Binding IsBeta}">
+                                                                <TextBlock Text="BETA" FontSize="9" FontWeight="Bold"
+                                                                           Foreground="#6B46C1" LetterSpacing="0.5"/>
+                                                            </Border>
                                                             <TextBlock Text="{Binding Version}" FontSize="11.5"
                                                                        Foreground="#8E8E93" VerticalAlignment="Center"/>
                                                             <Border Background="#EEEEF2" CornerRadius="6"

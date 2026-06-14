@@ -372,6 +372,17 @@ public partial class MainWindowViewModel : ViewModelBase
 
         // Keep the "Available" list in sync with what's now installed.
         RebuildCatalog();
+        ApplyBetaFlags();
+    }
+
+    /// <summary>Flags installed plugins that the registry marks as beta, so the
+    /// BETA badge also shows in the Installed list (not just Available).</summary>
+    private void ApplyBetaFlags()
+    {
+        var betaIds = _registry.Where(e => e.Beta)
+            .Select(e => e.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var item in PluginItems)
+            item.IsBeta = betaIds.Contains(item.Entry.Plugin.PluginId.ToString());
     }
 
     private async Task RefreshSavedProfilesAsync(CancellationToken ct)
@@ -607,6 +618,7 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             _registry = await _catalog.FetchAsync(ct);
             RebuildCatalog();
+            ApplyBetaFlags();
             if (_registry.Count == 0)
                 CatalogStatus = "No plugins available (couldn't reach the registry).";
         }

@@ -42,5 +42,9 @@ public sealed partial class PluginItemViewModel : ObservableObject
     [ObservableProperty]
     private bool _isEnabled;
 
+    /// <summary>True if the registry marks this plugin as beta (set by the host).</summary>
+    [ObservableProperty]
+    private bool _isBeta;
+
     partial void OnIsEnabledChanged(bool value) => EnabledChanged?.Invoke(this);
 }
