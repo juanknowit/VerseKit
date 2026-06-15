@@ -98,11 +98,8 @@ public sealed class DataverseClientFactory(ISecretStore secrets, ILogger<Dataver
                 text-align: center; max-width: 380px;
             }
             .logo {
-                width: 72px; height: 72px; border-radius: 17px;
-                background: linear-gradient(180deg, #409CFF 0%, #005BD8 100%);
+                width: 72px; height: 72px; margin: 0 auto 20px;
                 display: flex; align-items: center; justify-content: center;
-                margin: 0 auto 20px;
-                color: #fff; font-size: 20px; font-weight: 700; letter-spacing: .5px;
             }
             .check { color: #34C759; font-size: 15px; font-weight: 600; margin: 0 0 6px; }
             h1 { font-size: 21px; font-weight: 600; margin: 0 0 8px; }
@@ -111,7 +108,7 @@ public sealed class DataverseClientFactory(ISecretStore secrets, ILogger<Dataver
         </head>
         <body>
             <div class="card">
-                <div class="logo">VK</div>
+                <div class="logo"><svg width="72" height="72" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4DA8FF"/><stop offset="1" stop-color="#0A57D0"/></linearGradient><radialGradient id="sphere" cx="0.4" cy="0.34" r="0.85"><stop offset="0" stop-color="#FFFFFF" stop-opacity="0.32"/><stop offset="0.7" stop-color="#FFFFFF" stop-opacity="0.08"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0.02"/></radialGradient><clipPath id="sq"><rect width="1024" height="1024" rx="226"/></clipPath></defs><g clip-path="url(#sq)"><rect width="1024" height="1024" fill="url(#bg)"/><circle cx="512" cy="512" r="331" fill="url(#sphere)"/><g fill="none" stroke="#FFFFFF" stroke-width="17" stroke-linecap="round" stroke-dasharray="0.5 41"><circle cx="512" cy="512" r="331" opacity="0.68"/><ellipse cx="512" cy="512" rx="126" ry="331" opacity="0.55"/><ellipse cx="512" cy="362" rx="268" ry="71" stroke-width="15" opacity="0.41"/><ellipse cx="512" cy="662" rx="268" ry="71" stroke-width="15" opacity="0.41"/></g><text x="512" y="512" text-anchor="middle" dominant-baseline="central" font-family="Helvetica Neue, Arial, sans-serif" font-size="141" font-weight="700" letter-spacing="36" fill="#FFFFFF">VERSE</text></g></svg></div>
                 <div class="check">&#10003;&nbsp;Signed in</div>
                 <h1>Authentication complete</h1>
                 <p>You're connected. You can close this tab and return to VerseKit.</p>
@@ -141,11 +138,8 @@ public sealed class DataverseClientFactory(ISecretStore secrets, ILogger<Dataver
                 text-align: center; max-width: 420px;
             }
             .logo {
-                width: 72px; height: 72px; border-radius: 17px;
-                background: linear-gradient(180deg, #409CFF 0%, #005BD8 100%);
+                width: 72px; height: 72px; margin: 0 auto 20px;
                 display: flex; align-items: center; justify-content: center;
-                margin: 0 auto 20px;
-                color: #fff; font-size: 20px; font-weight: 700; letter-spacing: .5px;
             }
             .err { color: #FF3B30; font-size: 15px; font-weight: 600; margin: 0 0 6px; }
             h1 { font-size: 21px; font-weight: 600; margin: 0 0 8px; }
@@ -155,7 +149,7 @@ public sealed class DataverseClientFactory(ISecretStore secrets, ILogger<Dataver
         </head>
         <body>
             <div class="card">
-                <div class="logo">VK</div>
+                <div class="logo"><svg width="72" height="72" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4DA8FF"/><stop offset="1" stop-color="#0A57D0"/></linearGradient><radialGradient id="sphere" cx="0.4" cy="0.34" r="0.85"><stop offset="0" stop-color="#FFFFFF" stop-opacity="0.32"/><stop offset="0.7" stop-color="#FFFFFF" stop-opacity="0.08"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0.02"/></radialGradient><clipPath id="sq"><rect width="1024" height="1024" rx="226"/></clipPath></defs><g clip-path="url(#sq)"><rect width="1024" height="1024" fill="url(#bg)"/><circle cx="512" cy="512" r="331" fill="url(#sphere)"/><g fill="none" stroke="#FFFFFF" stroke-width="17" stroke-linecap="round" stroke-dasharray="0.5 41"><circle cx="512" cy="512" r="331" opacity="0.68"/><ellipse cx="512" cy="512" rx="126" ry="331" opacity="0.55"/><ellipse cx="512" cy="362" rx="268" ry="71" stroke-width="15" opacity="0.41"/><ellipse cx="512" cy="662" rx="268" ry="71" stroke-width="15" opacity="0.41"/></g><text x="512" y="512" text-anchor="middle" dominant-baseline="central" font-family="Helvetica Neue, Arial, sans-serif" font-size="141" font-weight="700" letter-spacing="36" fill="#FFFFFF">VERSE</text></g></svg></div>
                 <div class="err">&#10007;&nbsp;Sign-in failed</div>
                 <h1>Authentication did not complete</h1>
                 <p>Close this tab and try connecting again from VerseKit.</p>
