@@ -321,16 +321,45 @@ public sealed class DataverseClientFactory(ISecretStore secrets, ILogger<Dataver
     }
 
     /// <summary>Wraps a ServiceClient around a token provider that refreshes
-    /// silently from the (now persistent) MSAL cache.</summary>
-    private static ServiceClient BuildServiceClient(
+    /// silently from the (persistent) MSAL cache, re-prompting interactively if
+    /// the silent refresh fails — rather than letting the request go out
+    /// unauthenticated (which surfaces as a 403 'Anonymous' error).</summary>
+    private ServiceClient BuildServiceClient(
         ConnectionProfile profile, IPublicClientApplication app,
         string[] scopes, IAccount account) =>
         new(
             new Uri(profile.EnvironmentUrl),
             async (_resourceUrl) =>
             {
-                var result = await app.AcquireTokenSilent(scopes, account).ExecuteAsync();
-                return result.AccessToken;
+                try
+                {
+                    var result = await app.AcquireTokenSilent(scopes, account).ExecuteAsync();
+                    return result.AccessToken;
+                }
+                catch (MsalUiRequiredException ex)
+                {
+                    // Token revoked / expired / Conditional Access / cross-tenant
+                    // silent miss. Re-prompt instead of returning no token.
+                    logger.LogWarning(ex,
+                        "Silent token refresh failed for '{Name}'; prompting interactively. " +
+                        "If this recurs for a client environment, set its Tenant ID.", profile.Name);
+                    var result = await app.AcquireTokenInteractive(scopes)
+                        .WithAccount(account)
+                        .WithUseEmbeddedWebView(false)
+                        .WithSystemWebViewOptions(new SystemWebViewOptions
+                        {
+                            HtmlMessageSuccess = BrowserSuccessHtml,
+                            HtmlMessageError = BrowserErrorHtml
+                        })
+                        .ExecuteAsync();
+                    return result.AccessToken;
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Token acquisition failed for '{Name}' (resource {Resource})",
+                        profile.Name, _resourceUrl);
+                    throw;
+                }
             },
             useUniqueInstance: true,
             logger: null);
