@@ -1,4 +1,6 @@
+using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Identity.Client;
 using Microsoft.Identity.Client.Extensions.Msal;
@@ -186,6 +188,39 @@ public sealed class DataverseClientFactory(ISecretStore secrets, ILogger<Dataver
 
         logger.LogInformation("Connected to '{Name}' successfully", profile.Name);
         return client;
+    }
+
+    /// <summary>
+    /// Discovers the Entra tenant id for a Dataverse environment from its
+    /// unauthenticated auth challenge (the WWW-Authenticate <c>authorization_uri</c>),
+    /// so cross-tenant / client environments authenticate against a tenant-specific
+    /// authority instead of <c>/common</c>. Returns null if it can't be determined.
+    /// </summary>
+    public async Task<string?> ResolveTenantIdAsync(string environmentUrl, CancellationToken ct = default)
+    {
+        try
+        {
+            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+            var probe = $"{environmentUrl.TrimEnd('/')}/api/data/v9.2/";
+            using var resp = await http.GetAsync(probe, HttpCompletionOption.ResponseHeadersRead, ct);
+            foreach (var challenge in resp.Headers.WwwAuthenticate)
+            {
+                var m = Regex.Match(challenge.Parameter ?? "",
+                    @"login\.microsoftonline\.[a-z.]+/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})");
+                if (m.Success)
+                {
+                    logger.LogInformation("Resolved tenant {Tenant} for {Url}", m.Groups[1].Value, environmentUrl);
+                    return m.Groups[1].Value;
+                }
+            }
+            logger.LogWarning("No tenant found in the auth challenge for {Url}", environmentUrl);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Tenant discovery failed for {Url}", environmentUrl);
+        }
+        return null;
     }
 
     private async Task<ServiceClient> CreateInteractiveAsync(ConnectionProfile profile, CancellationToken ct,

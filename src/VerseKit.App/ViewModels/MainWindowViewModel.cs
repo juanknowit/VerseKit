@@ -263,6 +263,9 @@ public partial class MainWindowViewModel : ViewModelBase
         try
         {
             await _connectionManager.ConnectAsync(item.Profile, ct: cts.Token);
+            // Connecting may have auto-resolved and persisted the tenant id;
+            // reload so the in-memory profile (and edit form) reflect it.
+            await RefreshSavedProfilesAsync(cts.Token);
         }
         catch (OperationCanceledException)
         {

@@ -69,6 +69,21 @@ public sealed class ConnectionManager : IConnectionProvider, IDisposable
         if (usesSecret && !string.IsNullOrWhiteSpace(secret))
             await _secrets.WriteAsync(profile.Name, secret, ct);
 
+        // Auto-resolve the tenant from the environment when it isn't set, so
+        // cross-tenant / client environments authenticate against the correct
+        // tenant authority. Without this, /common silently refreshes against the
+        // user's home tenant and later calls fail as 'Anonymous'. Persist it so
+        // the profile remembers the tenant going forward.
+        if (string.IsNullOrWhiteSpace(profile.TenantId))
+        {
+            var tenant = await _factory.ResolveTenantIdAsync(profile.EnvironmentUrl, ct);
+            if (!string.IsNullOrWhiteSpace(tenant))
+            {
+                profile = WithTenantId(profile, tenant);
+                await SaveProfileAsync(profile, ct: ct);
+            }
+        }
+
         // Connect first, swap after: if the new connection fails or is
         // cancelled (abandoned browser login), the current one survives.
         var newClient = await _factory.CreateAsync(profile, ct, forceReauth);
@@ -218,6 +233,19 @@ public sealed class ConnectionManager : IConnectionProvider, IDisposable
         RedirectUri = p.RedirectUri,
         CertificatePath = p.CertificatePath,
         Folder = folder
+    };
+
+    /// <summary>Copy a profile with a resolved tenant id (ConnectionProfile is immutable).</summary>
+    private static ConnectionProfile WithTenantId(ConnectionProfile p, string tenantId) => new()
+    {
+        Name = p.Name,
+        EnvironmentUrl = p.EnvironmentUrl,
+        AuthMethod = p.AuthMethod,
+        ClientId = p.ClientId,
+        TenantId = tenantId,
+        RedirectUri = p.RedirectUri,
+        CertificatePath = p.CertificatePath,
+        Folder = p.Folder
     };
 
     private static string SanitizeName(string name) =>
