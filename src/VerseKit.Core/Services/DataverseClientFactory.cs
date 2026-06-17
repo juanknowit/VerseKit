@@ -203,15 +203,22 @@ public sealed class DataverseClientFactory(ISecretStore secrets, ILogger<Dataver
             using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
             var probe = $"{environmentUrl.TrimEnd('/')}/api/data/v9.2/";
             using var resp = await http.GetAsync(probe, HttpCompletionOption.ResponseHeadersRead, ct);
-            foreach (var challenge in resp.Headers.WwwAuthenticate)
+
+            // Read the RAW header, not the strongly-typed resp.Headers.WwwAuthenticate:
+            // that typed parser silently drops values it can't parse cleanly, and the
+            // Dataverse challenge ("Bearer authorization_uri=…, resource_id=…") has a
+            // comma that trips it, leaving the typed collection empty.
+            var challenges = new List<string>();
+            if (resp.Headers.TryGetValues("WWW-Authenticate", out var rawValues))
+                challenges.AddRange(rawValues);
+            foreach (var c in resp.Headers.WwwAuthenticate) // fallback
+                if (!string.IsNullOrEmpty(c.Parameter)) challenges.Add(c.Parameter!);
+
+            var tenant = ExtractTenantId(challenges);
+            if (tenant is not null)
             {
-                var m = Regex.Match(challenge.Parameter ?? "",
-                    @"login\.microsoftonline\.[a-z.]+/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})");
-                if (m.Success)
-                {
-                    logger.LogInformation("Resolved tenant {Tenant} for {Url}", m.Groups[1].Value, environmentUrl);
-                    return m.Groups[1].Value;
-                }
+                logger.LogInformation("Resolved tenant {Tenant} for {Url}", tenant, environmentUrl);
+                return tenant;
             }
             logger.LogWarning("No tenant found in the auth challenge for {Url}", environmentUrl);
         }
@@ -219,6 +226,22 @@ public sealed class DataverseClientFactory(ISecretStore secrets, ILogger<Dataver
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Tenant discovery failed for {Url}", environmentUrl);
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Pulls the Entra tenant GUID out of one or more WWW-Authenticate challenge
+    /// strings (the <c>authorization_uri=https://login.microsoftonline.com/&lt;tenant&gt;/…</c>
+    /// part). Returns null if none contain a tenant. Public for unit testing.
+    /// </summary>
+    public static string? ExtractTenantId(IEnumerable<string> challenges)
+    {
+        foreach (var challenge in challenges)
+        {
+            var m = Regex.Match(challenge ?? "",
+                @"login\.microsoftonline\.[a-z.]+/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})");
+            if (m.Success) return m.Groups[1].Value;
         }
         return null;
     }
