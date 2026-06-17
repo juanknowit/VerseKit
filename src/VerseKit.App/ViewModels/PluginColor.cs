@@ -29,6 +29,7 @@ public static class PluginColor
         ["c3d4e5f6-a7b8-9012-cdef-345678901234"] = Color.Parse("#34C759"), // Security Roles → green
         ["d4e5f6a7-b8c9-0123-defa-456789012345"] = Color.Parse("#FF3B30"), // Access Checker → red
         ["e5f6a7b8-c9d0-1234-efab-567890123456"] = Color.Parse("#AF52DE"), // Solution Explorer → purple
+        ["b8c9d0e1-f2a3-4567-bcde-000000000000"] = Color.Parse("#5AC8FA"), // Flow Runs → teal
     };
 
     public static IBrush For(string key)

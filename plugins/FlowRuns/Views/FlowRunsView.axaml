@@ -1,0 +1,274 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FlowRuns.ViewModels"
+             xmlns:models="using:FlowRuns.Models"
+             x:Class="FlowRuns.Views.FlowRunsView"
+             x:Name="Root"
+             x:DataType="vm:FlowRunsViewModel">
+
+    <UserControl.Styles>
+        <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
+        <!-- Selectable/copyable read-only text. SelectableTextBlock crashes the
+             render thread on empty text (Avalonia bug), so we use a flat TextBox. -->
+        <Style Selector="TextBox.copy">
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid RowDefinitions="Auto,Auto,*">
+
+        <!-- ══ Toolbar ════════════════════════════════════════════════ -->
+        <Border Grid.Row="0" Background="#F8F8FA" BorderBrush="#E5E5EA"
+                BorderThickness="0,0,0,1" Padding="16,10">
+            <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="7"
+                            VerticalAlignment="Center" Margin="0,0,12,0">
+                    <TextBlock Text="Flow Runs" FontWeight="SemiBold" FontSize="13"
+                               Foreground="#1C1C1E" VerticalAlignment="Center"/>
+                    <Border Background="#EFE7FE" CornerRadius="5" Padding="6,1" VerticalAlignment="Center">
+                        <TextBlock Text="BETA" FontSize="9" FontWeight="Bold"
+                                   Foreground="#6B46C1" LetterSpacing="0.5"/>
+                    </Border>
+                </StackPanel>
+
+                <ComboBox Grid.Column="1" Width="220" VerticalAlignment="Center"
+                          IsEnabled="{Binding ShowContent}"
+                          ItemsSource="{Binding Flows}" SelectedItem="{Binding SelectedFlow}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="models:FlowOption">
+                            <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+
+                <ComboBox Grid.Column="2" Width="130" Margin="8,0,0,0" VerticalAlignment="Center"
+                          IsEnabled="{Binding ShowContent}"
+                          ItemsSource="{Binding StatusFilters}" SelectedItem="{Binding SelectedStatus}"/>
+
+                <ComboBox Grid.Column="3" Width="130" Margin="8,0,0,0" VerticalAlignment="Center"
+                          IsEnabled="{Binding ShowContent}"
+                          ItemsSource="{Binding DateRanges}" SelectedItem="{Binding SelectedDateRange}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="models:DateRangeOption">
+                            <TextBlock Text="{Binding Label}"/>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+
+                <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="8"
+                            VerticalAlignment="Center" Margin="0,0,8,0"
+                            IsVisible="{Binding HasResults}">
+                    <Button Content="Export CSV" Command="{Binding ExportCsvCommand}"
+                            FontSize="12" Padding="10,5"/>
+                    <Button Content="Export Excel" Command="{Binding ExportExcelCommand}"
+                            FontSize="12" Padding="10,5"/>
+                </StackPanel>
+
+                <Button Grid.Column="6" Content="Refresh" Classes="Primary"
+                        Command="{Binding RefreshCommand}"
+                        IsEnabled="{Binding ShowContent}"
+                        Padding="16,5" VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+
+        <!-- ══ Summary / status bar ═══════════════════════════════════ -->
+        <Border Grid.Row="1" BorderBrush="#E5E5EA" BorderThickness="0,0,0,1" Padding="16,8"
+                Background="#FBFBFD" IsVisible="{Binding ShowContent}">
+            <DockPanel>
+                <ProgressBar DockPanel.Dock="Bottom" IsIndeterminate="True" Height="2" Margin="0,8,0,0"
+                             IsVisible="{Binding IsLoading}"/>
+                <TextBlock DockPanel.Dock="Right" Text="{Binding StatusMessage}"
+                           FontSize="11" Foreground="#8E8E93" VerticalAlignment="Center"/>
+                <StackPanel Orientation="Vertical" Spacing="2">
+                    <TextBlock Text="{Binding Summary}" FontSize="12" FontWeight="Medium"
+                               Foreground="#1C1C1E"/>
+                    <TextBlock Text="{Binding WarningMessage}" FontSize="11" Foreground="#FF9500"
+                               IsVisible="{Binding WarningMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- ══ Connect prompt ═════════════════════════════════════════ -->
+        <StackPanel Grid.Row="2" IsVisible="{Binding ShowConnectPrompt}"
+                    HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+            <TextBlock Text="Not connected" FontSize="16" FontWeight="Light"
+                       Foreground="#8E8E93" HorizontalAlignment="Center"/>
+            <TextBlock Text="Connect to an environment to view cloud flow run history."
+                       FontSize="13" Foreground="#AEAEB2" HorizontalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- ══ Feature-not-enabled panel ══════════════════════════════ -->
+        <Border Grid.Row="2" IsVisible="{Binding ShowNotEnabled}"
+                Padding="40" MaxWidth="560" VerticalAlignment="Center" HorizontalAlignment="Center">
+            <StackPanel Spacing="12">
+                <TextBlock Text="Run history isn't stored in Dataverse for this environment"
+                           FontSize="16" FontWeight="SemiBold" Foreground="#1C1C1E"
+                           TextWrapping="Wrap" HorizontalAlignment="Center" TextAlignment="Center"/>
+                <TextBlock TextWrapping="Wrap" FontSize="13" Foreground="#636366" TextAlignment="Center"
+                           Text="Cloud flow run history in Dataverse is turned off (time-to-live is 0), so there are no run records to read. An administrator can enable it in the Power Platform admin center:"/>
+                <StackPanel Spacing="4" Margin="0,4,0,0">
+                    <TextBlock FontSize="12" Foreground="#636366" Text="1. Power Platform admin center → Environments → this environment"/>
+                    <TextBlock FontSize="12" Foreground="#636366" Text="2. Settings → Product → Features"/>
+                    <TextBlock FontSize="12" Foreground="#636366" Text="3. Under “Cloud flow run history in Dataverse”, set retention to 7, 14, or 28 days"/>
+                </StackPanel>
+                <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#AEAEB2" TextAlignment="Center"
+                           Text="Only solution-aware cloud flows are captured, and history starts accumulating after it's enabled."/>
+            </StackPanel>
+        </Border>
+
+        <!-- ══ Runs grid ══════════════════════════════════════════════ -->
+        <DataGrid Grid.Row="2" x:Name="RunsGrid"
+                  IsVisible="{Binding ShowContent}"
+                  ItemsSource="{Binding Runs}"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  CanUserResizeColumns="True"
+                  CanUserSortColumns="True"
+                  GridLinesVisibility="Horizontal"
+                  HeadersVisibility="Column"
+                  FontSize="12">
+            <DataGrid.Columns>
+                <DataGridTemplateColumn Width="46" CanUserResize="False" CanUserSort="False">
+                    <DataGridTemplateColumn.Header>
+                        <CheckBox Margin="6,0,0,0"
+                                  IsChecked="{ReflectionBinding DataContext.SelectAll, ElementName=Root, Mode=TwoWay}"
+                                  ToolTip.Tip="Select all shown"/>
+                    </DataGridTemplateColumn.Header>
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate x:DataType="models:FlowRunItem">
+                            <CheckBox Margin="12,0,0,0" VerticalAlignment="Center"
+                                      IsChecked="{Binding IsSelected, Mode=TwoWay}"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <DataGridTemplateColumn Header="Status" Width="110" SortMemberPath="StatusKind">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate x:DataType="models:FlowRunItem">
+                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <Ellipse Width="8" Height="8" Fill="{Binding StatusBrush}" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding StatusKind}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="Flow" Binding="{Binding FlowName}" Width="2*"/>
+                <DataGridTextColumn Header="Run by" Binding="{Binding Owner}" Width="160"/>
+                <DataGridTextColumn Header="Start" Binding="{Binding StartDisplay}" Width="160"
+                                    SortMemberPath="Start"/>
+                <DataGridTextColumn Header="Duration" Binding="{Binding DurationDisplay}" Width="90"/>
+                <DataGridTextColumn Header="Trigger" Binding="{Binding TriggerType}" Width="120"/>
+                <DataGridTemplateColumn Width="Auto" CanUserResize="False" CanUserSort="False">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate x:DataType="models:FlowRunItem">
+                            <Button Content="Details" FontSize="11" Padding="10,3" Margin="6,0"
+                                    VerticalAlignment="Center"
+                                    Command="{ReflectionBinding DataContext.InspectCommand, ElementName=Root}"
+                                    CommandParameter="{ReflectionBinding}"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- ══ Detail overlay ═════════════════════════════════════════ -->
+        <Grid Grid.Row="0" Grid.RowSpan="3" IsVisible="{Binding IsDetailOpen}">
+            <!-- Scrim: a flat full-bleed button so clicking outside closes (no code-behind) -->
+            <Button Command="{Binding CloseDetailCommand}"
+                    Background="#33000000" BorderThickness="0" CornerRadius="0" Padding="0"
+                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                    HorizontalContentAlignment="Stretch"/>
+
+            <Border Width="480" HorizontalAlignment="Right" VerticalAlignment="Stretch"
+                    Background="White" BorderBrush="#E5E5EA" BorderThickness="1,0,0,0">
+                <DockPanel>
+                    <!-- Header -->
+                    <Border DockPanel.Dock="Top" Background="#F8F8FA" BorderBrush="#E5E5EA"
+                            BorderThickness="0,0,0,1" Padding="16,12">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Grid.Column="0" Spacing="6">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <Ellipse Width="9" Height="9" VerticalAlignment="Center"
+                                             Fill="{Binding SelectedRun.StatusBrush}"/>
+                                    <TextBlock Text="{Binding SelectedRun.StatusKind}" FontWeight="SemiBold"
+                                               FontSize="13" Foreground="#1C1C1E" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <TextBlock Text="{Binding SelectedRun.FlowName}" FontSize="13"
+                                           Foreground="#1C1C1E" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <Button Grid.Column="1" Content="✕" Command="{Binding CloseDetailCommand}"
+                                    FontSize="13" Padding="8,3" VerticalAlignment="Top"
+                                    Background="Transparent" BorderThickness="0"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- Fields -->
+                    <ScrollViewer Padding="16,12">
+                        <StackPanel Spacing="12">
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="RUN BY" FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93"/>
+                                <TextBlock Text="{Binding SelectedRun.Owner}" FontSize="13" Foreground="#1C1C1E"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <Grid ColumnDefinitions="*,*">
+                                <StackPanel Grid.Column="0" Spacing="3">
+                                    <TextBlock Text="TRIGGER" FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93"/>
+                                    <TextBlock Text="{Binding SelectedRun.TriggerType}" FontSize="13" Foreground="#1C1C1E"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Spacing="3">
+                                    <TextBlock Text="DURATION" FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93"/>
+                                    <TextBlock Text="{Binding SelectedRun.DurationDisplay}" FontSize="13" Foreground="#1C1C1E"/>
+                                </StackPanel>
+                            </Grid>
+                            <Grid ColumnDefinitions="*,*">
+                                <StackPanel Grid.Column="0" Spacing="3">
+                                    <TextBlock Text="START" FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93"/>
+                                    <TextBlock Text="{Binding SelectedRun.StartDisplay}" FontSize="13" Foreground="#1C1C1E"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Spacing="3">
+                                    <TextBlock Text="END" FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93"/>
+                                    <TextBlock Text="{Binding SelectedRun.EndDisplay}" FontSize="13" Foreground="#1C1C1E"/>
+                                </StackPanel>
+                            </Grid>
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="RUN ID" FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93"/>
+                                <TextBox Classes="copy" Text="{Binding SelectedRun.RunId}" FontSize="12"
+                                         Foreground="#636366" FontFamily="SF Mono,Menlo,monospace"/>
+                            </StackPanel>
+                            <StackPanel Spacing="3" IsVisible="{Binding SelectedRun.HasParent}">
+                                <TextBlock Text="PARENT RUN ID" FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93"/>
+                                <TextBox Classes="copy" Text="{Binding SelectedRun.ParentRunId}" FontSize="12"
+                                         Foreground="#636366" FontFamily="SF Mono,Menlo,monospace"/>
+                            </StackPanel>
+
+                            <!-- Error block -->
+                            <StackPanel Spacing="6" IsVisible="{Binding SelectedRun.HasError}">
+                                <Rectangle Height="1" Fill="#E5E5EA" Margin="0,4"/>
+                                <StackPanel Spacing="3" IsVisible="{Binding SelectedRun.ErrorCode, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                    <TextBlock Text="ERROR CODE" FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93"/>
+                                    <TextBox Classes="copy" Text="{Binding SelectedRun.ErrorCode}" FontSize="13"
+                                             Foreground="#FF3B30"/>
+                                </StackPanel>
+                                <StackPanel Spacing="3" IsVisible="{Binding SelectedRun.ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                    <TextBlock Text="ERROR MESSAGE" FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93"/>
+                                    <Border Background="#FBFBFD" BorderBrush="#E5E5EA" BorderThickness="1"
+                                            CornerRadius="6" Padding="10" MaxHeight="280">
+                                        <ScrollViewer>
+                                            <TextBox Classes="copy" Text="{Binding SelectedRun.ErrorMessage}" FontSize="12"
+                                                     Foreground="#1C1C1E" FontFamily="SF Mono,Menlo,monospace"/>
+                                        </ScrollViewer>
+                                    </Border>
+                                </StackPanel>
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>
