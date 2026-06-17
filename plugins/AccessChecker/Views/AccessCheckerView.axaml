@@ -105,12 +105,19 @@
                 <Border Grid.Row="0" IsVisible="{Binding IsUserSelected}"
                         Background="#F8F8FA" BorderBrush="#E5E5EA"
                         BorderThickness="0,0,0,1" Padding="16,10">
-                    <StackPanel Spacing="2" VerticalAlignment="Center">
-                        <TextBlock Text="{Binding SelectedUser.Title}"
-                                   FontSize="14" FontWeight="SemiBold" Foreground="#1C1C1E"/>
-                        <TextBlock Text="{Binding SelectedUser.Secondary}"
-                                   FontSize="11" Foreground="#636366"/>
-                    </StackPanel>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding SelectedUser.Title}"
+                                       FontSize="14" FontWeight="SemiBold" Foreground="#1C1C1E"/>
+                            <TextBlock Text="{Binding SelectedUser.Secondary}"
+                                       FontSize="11" Foreground="#636366"/>
+                        </StackPanel>
+                        <Button Grid.Column="1" Content="Export Excel"
+                                Command="{Binding ExportCompareCommand}"
+                                IsVisible="{Binding CanExportCompare}"
+                                FontSize="12" Padding="12,6" VerticalAlignment="Center"
+                                ToolTip.Tip="Export the comparison to an Excel file"/>
+                    </Grid>
                 </Border>
 
                 <!-- Tabs: Effective access | Roles -->
@@ -362,6 +369,119 @@
                                     </Style>
                                     <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
                                         <Setter Property="Background" Value="{DynamicResource TintBrush}"/>
+                                    </Style>
+                                </ListBox.Styles>
+                            </ListBox>
+                        </DockPanel>
+                    </TabItem>
+
+                    <!-- ══ Compare ══════════════════════════════════ -->
+                    <TabItem>
+                        <TabItem.Header><TextBlock Text="Compare" FontSize="13"/></TabItem.Header>
+                        <DockPanel>
+                            <!-- Picker + options + status -->
+                            <Border DockPanel.Dock="Top" Padding="14,8"
+                                    Background="#FBFBFD" BorderBrush="#E5E5EA" BorderThickness="0,0,0,1">
+                                <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto">
+                                    <AutoCompleteBox Grid.Column="0" Width="240" VerticalAlignment="Center"
+                                                     PlaceholderText="Compare with a user…"
+                                                     FilterMode="Contains"
+                                                     ItemsSource="{Binding CompareCandidates}"
+                                                     SelectedItem="{Binding CompareUser}">
+                                        <AutoCompleteBox.ItemTemplate>
+                                            <DataTemplate x:DataType="models:UserItem">
+                                                <StackPanel Spacing="1" Margin="2">
+                                                    <TextBlock Text="{Binding Title}" FontSize="12" FontWeight="Medium"/>
+                                                    <TextBlock Text="{Binding Secondary}" FontSize="10" Foreground="#8E8E93"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </AutoCompleteBox.ItemTemplate>
+                                    </AutoCompleteBox>
+                                    <CheckBox Grid.Column="1" Content="Only differences"
+                                              IsChecked="{Binding ShowOnlyDifferences}"
+                                              FontSize="12" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                                    <TextBox Grid.Column="2" PlaceholderText="Filter tables…"
+                                             Text="{Binding CompareFilterText}"
+                                             Width="180" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                                    <TextBlock Grid.Column="4" Text="{Binding CompareStatus}"
+                                               FontSize="11" Foreground="#636366" VerticalAlignment="Center"
+                                               Margin="12,0,0,0" MaxWidth="300" TextTrimming="CharacterEllipsis"/>
+                                </Grid>
+                            </Border>
+
+                            <ProgressBar DockPanel.Dock="Top" IsIndeterminate="True"
+                                         IsVisible="{Binding IsCompareLoading}" Height="2" Margin="0"/>
+
+                            <!-- Empty state when no compare user chosen -->
+                            <StackPanel DockPanel.Dock="Top" Margin="0,40,0,0" Spacing="6"
+                                        IsVisible="{Binding CompareUser, Converter={x:Static ObjectConverters.IsNull}}">
+                                <TextBlock Text="Pick a user to compare" FontSize="15" FontWeight="Light"
+                                           Foreground="#8E8E93" HorizontalAlignment="Center"/>
+                                <TextBlock Text="Choose a second user above to see where their effective access differs."
+                                           FontSize="12" Foreground="#AEAEB2" HorizontalAlignment="Center"/>
+                            </StackPanel>
+
+                            <Grid DockPanel.Dock="Top" Height="28" Background="#FAFAFB"
+                                  IsVisible="{Binding CompareUser, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                  ColumnDefinitions="170,150,90,*,*">
+                                <TextBlock Grid.Column="0" Text="TABLE" Margin="14,0,0,0"
+                                           FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="LOGICAL NAME"
+                                           FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="2" Text="PRIVILEGE"
+                                           FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="3" Text="{Binding SelectedUserName}"
+                                           FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93"
+                                           VerticalAlignment="Center" Margin="6,0,0,0" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Grid.Column="4" Text="{Binding CompareUserName}"
+                                           FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93"
+                                           VerticalAlignment="Center" Margin="6,0,0,0" TextTrimming="CharacterEllipsis"/>
+                            </Grid>
+
+                            <ListBox ItemsSource="{Binding Comparisons}"
+                                     Background="Transparent" BorderThickness="0" Padding="0"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:ComparisonRow">
+                                        <Grid Height="32" ColumnDefinitions="170,150,90,*,*">
+                                            <Border Grid.Column="0" Width="3" Background="{Binding AccentColor}"
+                                                    HorizontalAlignment="Left" VerticalAlignment="Stretch"/>
+                                            <TextBlock Grid.Column="0" Text="{Binding Title}" FontSize="12" Foreground="#1C1C1E"
+                                                       VerticalAlignment="Center" ClipToBounds="True"
+                                                       TextTrimming="CharacterEllipsis" Margin="14,0,6,0"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding LogicalName}" FontSize="11" Foreground="#636366"
+                                                       FontFamily="SF Mono,Menlo,monospace" VerticalAlignment="Center"
+                                                       ClipToBounds="True" TextTrimming="CharacterEllipsis" Margin="0,0,6,0"/>
+                                            <TextBlock Grid.Column="2" Text="{Binding Privilege}" FontSize="11" Foreground="#636366"
+                                                       VerticalAlignment="Center"/>
+                                            <Border Grid.Column="3" Background="{Binding CellA.Color}"
+                                                    IsVisible="{Binding CellA.Applicable}"
+                                                    CornerRadius="4" Height="20" Margin="6,0" Padding="8,0"
+                                                    HorizontalAlignment="Left" VerticalAlignment="Center"
+                                                    ToolTip.Tip="{Binding CellA.Full}">
+                                                <TextBlock Text="{Binding CellA.Short}" FontSize="9" FontWeight="SemiBold"
+                                                           Foreground="{Binding CellA.TextColor}" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <Border Grid.Column="4" Background="{Binding CellB.Color}"
+                                                    IsVisible="{Binding CellB.Applicable}"
+                                                    CornerRadius="4" Height="20" Margin="6,0" Padding="8,0"
+                                                    HorizontalAlignment="Left" VerticalAlignment="Center"
+                                                    ToolTip.Tip="{Binding CellB.Full}">
+                                                <TextBlock Text="{Binding CellB.Short}" FontSize="9" FontWeight="SemiBold"
+                                                           Foreground="{Binding CellB.TextColor}" VerticalAlignment="Center"/>
+                                            </Border>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                                <ListBox.Styles>
+                                    <Style Selector="ListBoxItem">
+                                        <Setter Property="Padding" Value="0"/>
+                                    </Style>
+                                    <Style Selector="ListBoxItem:nth-child(2n) /template/ ContentPresenter">
+                                        <Setter Property="Background" Value="#FAFAFB"/>
+                                    </Style>
+                                    <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
+                                        <Setter Property="Background" Value="#0F000000"/>
                                     </Style>
                                 </ListBox.Styles>
                             </ListBox>

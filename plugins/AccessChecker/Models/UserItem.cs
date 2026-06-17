@@ -22,4 +22,7 @@ public sealed class UserItem
             return letters.Length > 0 ? new string(letters) : "?";
         }
     }
+
+    // Drives the compare AutoCompleteBox's type-ahead filter and selected text.
+    public override string ToString() => Title;
 }

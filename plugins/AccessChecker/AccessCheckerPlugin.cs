@@ -15,7 +15,7 @@ public sealed class AccessCheckerPlugin : IVerseKitPlugin
     public Guid PluginId => new("d4e5f6a7-b8c9-0123-defa-456789012345");
     public string Name => "Access Checker";
     public string Description => "See a user's effective table privileges across all their roles and teams — read only";
-    public string Version => "1.0.0";
+    public string Version => "1.1.0";
 
     private IConnectionProvider? _connectionProvider;
 
