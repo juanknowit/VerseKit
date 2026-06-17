@@ -66,6 +66,16 @@
       "downloadUrl": "https://github.com/juanknowit/VerseKit/releases/download/plugins-v7/DependencyViewer.zip",
       "sha256": "64fe473244d9845cc0a668ba3159ccecd4a3800506c07a543b026e1d737bfd33",
       "beta": true
+    },
+    {
+      "id": "b8c9d0e1-f2a3-4567-bcde-000000000000",
+      "name": "Flow Runs",
+      "description": "View and export cloud flow run history (succeeded, failed, cancelled) from Dataverse — read only.",
+      "version": "1.0.0",
+      "author": "VerseKit",
+      "downloadUrl": "https://github.com/juanknowit/VerseKit/releases/download/plugins-v8/FlowRuns.zip",
+      "sha256": "33471c5a804d255b4ea118012d1d5b971e51b217a6db774d3dd2f3a68e144ac5",
+      "beta": true
     }
   ]
 }
