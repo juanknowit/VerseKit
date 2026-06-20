@@ -41,11 +41,10 @@
       "id": "e5f6a7b8-c9d0-1234-efab-567890123456",
       "name": "Solution Explorer",
       "description": "Browse solutions, see their components, and export managed/unmanaged to disk.",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "author": "VerseKit",
-      "downloadUrl": "https://github.com/juanknowit/VerseKit/releases/download/plugins-v6/SolutionExplorer.zip",
-      "sha256": "70dc698a2a34115df5f1e194394c5b175686f4cd07cccf2bcbf4c53ed3dbd927",
-      "beta": true
+      "downloadUrl": "https://github.com/juanknowit/VerseKit/releases/download/plugins-v10/SolutionExplorer.zip",
+      "sha256": "6412d6ebec0be0289761732d0ab5b58dab538fb0870b1825e8fd50496387f297"
     },
     {
       "id": "f6a7b8c9-d0e1-2345-fabc-678901234568",
