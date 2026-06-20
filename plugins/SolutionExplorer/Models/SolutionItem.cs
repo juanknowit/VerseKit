@@ -11,16 +11,12 @@ public sealed class SolutionItem
     public bool IsManaged { get; init; }
 
     public string Title => string.IsNullOrWhiteSpace(FriendlyName) ? UniqueName : FriendlyName;
-    public string Badge => IsManaged ? "MANAGED" : "UNMANAGED";
-    public string BadgeColor => IsManaged ? "#5A6470" : "#2E7D5B";
 
-    public string Initials
-    {
-        get
-        {
-            var parts = Title.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            var letters = parts.Select(p => char.ToUpperInvariant(p[0])).Take(2).ToArray();
-            return letters.Length > 0 ? new string(letters) : "?";
-        }
-    }
+    /// <summary>Title-case status used for the badge tooltip and the detail-header pill.</summary>
+    public string StatusLabel => IsManaged ? "Managed" : "Unmanaged";
+    public string StatusTooltip => IsManaged ? "Managed — read-only" : "Unmanaged — editable";
+
+    // Managed = purple, unmanaged = green. Colour carries the status (with the
+    // tooltip and the detail-header pill); the glyph stays the same for both.
+    public string BadgeColor => IsManaged ? "#8257E6" : "#34C759";
 }

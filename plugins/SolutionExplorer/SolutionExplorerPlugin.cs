@@ -15,7 +15,7 @@ public sealed class SolutionExplorerPlugin : IVerseKitPlugin
     public Guid PluginId => new("e5f6a7b8-c9d0-1234-efab-567890123456");
     public string Name => "Solution Explorer";
     public string Description => "Browse solutions, see their components, and export managed/unmanaged to disk";
-    public string Version => "1.1.0";
+    public string Version => "1.2.0";
 
     private IConnectionProvider? _connectionProvider;
 
