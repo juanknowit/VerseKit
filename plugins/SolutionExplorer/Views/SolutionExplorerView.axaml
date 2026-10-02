@@ -105,7 +105,7 @@
                             HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
                     <TextBlock Text="Select a solution" FontSize="16" FontWeight="Light" LetterSpacing="-0.3"
                                Foreground="#8E8E93" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Pick a solution on the left to see its components and export it."
+                    <TextBlock Text="Pick a solution on the left to see its components, check dependencies and export it."
                                FontSize="13" Foreground="#AEAEB2" HorizontalAlignment="Center"/>
                 </StackPanel>
 
@@ -132,6 +132,10 @@
                         </StackPanel>
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"
                                     VerticalAlignment="Center">
+                            <Button Content="Check Dependencies"
+                                    Command="{Binding CheckDependenciesCommand}"
+                                    ToolTip.Tip="Find components this solution needs but doesn't include"
+                                    FontSize="12" Padding="12,5"/>
                             <Button Content="Export Unmanaged"
                                     Command="{Binding ExportUnmanagedCommand}"
                                     IsEnabled="{Binding CanExportUnmanaged}"
@@ -145,6 +149,65 @@
 
                 <!-- Components -->
                 <DockPanel Classes="Appear" Grid.Row="1" IsVisible="{Binding IsSolutionSelected}">
+
+                    <!-- Missing-dependency result (after Check Dependencies) -->
+                    <ProgressBar DockPanel.Dock="Top" IsIndeterminate="True" Height="2" Margin="0"
+                                 IsVisible="{Binding IsCheckingDependencies}"/>
+                    <Border DockPanel.Dock="Top" Classes="Appear DepBanner"
+                            Classes.warn="{Binding HasMissingDependencies}"
+                            IsVisible="{Binding HasDependencyResult}"
+                            BorderBrush="#E5E5EA" BorderThickness="0,0,0,1" Padding="14,10">
+                        <Border.Styles>
+                            <Style Selector="Border.DepBanner">
+                                <Setter Property="Background" Value="#F2F7F3"/>
+                            </Style>
+                            <Style Selector="Border.DepBanner.warn">
+                                <Setter Property="Background" Value="#FFF6E8"/>
+                            </Style>
+                        </Border.Styles>
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right" Classes="IconBtn" Content="✕"
+                                    FontSize="12" Padding="6,2" VerticalAlignment="Top"
+                                    Command="{Binding DismissDependenciesCommand}"
+                                    ToolTip.Tip="Dismiss"/>
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="{Binding DependencyStatus}" FontSize="12"
+                                           FontWeight="Medium" Foreground="#3C3C43" TextWrapping="Wrap"/>
+                                <ScrollViewer MaxHeight="180" IsVisible="{Binding HasMissingDependencies}"
+                                              HorizontalScrollBarVisibility="Disabled">
+                                    <ItemsControl ItemsSource="{Binding MissingDependencies}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="models:MissingDependencyItem">
+                                                <Grid ColumnDefinitions="*,Auto,*" Margin="0,3" Background="Transparent">
+                                                    <Grid.ContextMenu>
+                                                        <ContextMenu>
+                                                            <MenuItem Header="Copy Required Name" Command="{x:Static local:CopyCommand.Instance}" CommandParameter="{Binding Required.Name}"/>
+                                                        </ContextMenu>
+                                                    </Grid.ContextMenu>
+                                                    <StackPanel Grid.Column="0" Spacing="1">
+                                                        <TextBlock Text="{Binding Required.Name}" FontSize="12"
+                                                                   FontWeight="Medium" Foreground="#1C1C1E"
+                                                                   TextTrimming="CharacterEllipsis"/>
+                                                        <TextBlock Text="{Binding Required.TypeName}" FontSize="10"
+                                                                   Foreground="#8E8E93" TextTrimming="CharacterEllipsis"/>
+                                                    </StackPanel>
+                                                    <TextBlock Grid.Column="1" Text="needed by" FontSize="11"
+                                                               Foreground="#AEAEB2" Margin="12,0"
+                                                               VerticalAlignment="Center"/>
+                                                    <StackPanel Grid.Column="2" Spacing="1">
+                                                        <TextBlock Text="{Binding RequiredBy.Name}" FontSize="12"
+                                                                   Foreground="#3C3C43" TextTrimming="CharacterEllipsis"/>
+                                                        <TextBlock Text="{Binding RequiredBy.TypeName}" FontSize="10"
+                                                                   Foreground="#8E8E93" TextTrimming="CharacterEllipsis"/>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
                     <Border DockPanel.Dock="Top" Padding="14,8"
                             Background="#FBFBFD" BorderBrush="#E5E5EA" BorderThickness="0,0,0,1">
                         <Grid ColumnDefinitions="Auto,Auto,*,Auto">
