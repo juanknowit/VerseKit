@@ -8,6 +8,13 @@
              x:Name="Root"
              x:DataType="vm:FlowRunsViewModel">
 
+    <UserControl.Resources>
+        <!-- The Fluent column header always reserves 32px for a sort arrow,
+             which squeezed the 46px select-all column's checkbox to zero
+             width. Reserve nothing; the arrow takes room only when shown. -->
+        <x:Double x:Key="DataGridSortIconMinWidth">0</x:Double>
+    </UserControl.Resources>
+
     <UserControl.KeyBindings>
         <KeyBinding Gesture="Escape" Command="{Binding CloseDetailCommand}"/>
     </UserControl.KeyBindings>
@@ -258,7 +265,9 @@
             <DataGrid.Columns>
                 <DataGridTemplateColumn Width="46" CanUserResize="False" CanUserSort="False">
                     <DataGridTemplateColumn.Header>
-                        <CheckBox Margin="6,0,0,0"
+                        <!-- No margin: the header's 12px padding lines it up
+                             with the row checkboxes (Margin 12) below. -->
+                        <CheckBox VerticalAlignment="Center"
                                   IsChecked="{ReflectionBinding DataContext.SelectAll, ElementName=Root, Mode=TwoWay}"
                                   ToolTip.Tip="Select all shown"/>
                     </DataGridTemplateColumn.Header>
