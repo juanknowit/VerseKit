@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:SecurityRoles.ViewModels"
              xmlns:models="using:SecurityRoles.Models"
+             xmlns:local="using:SecurityRoles.Views"
              x:Class="SecurityRoles.Views.SecurityRolesView"
              x:DataType="vm:SecurityRolesViewModel">
 
@@ -41,9 +42,18 @@
                          Background="Transparent" BorderThickness="0"
                          Padding="6,4"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.KeyBindings>
+                        <KeyBinding Gesture="Cmd+C" Command="{x:Static local:CopyCommand.Instance}" CommandParameter="{Binding SelectedRole.Name}"/>
+                    </ListBox.KeyBindings>
                     <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="models:RoleItem">
-                            <Grid ColumnDefinitions="58,*" Margin="0,1">
+                            <Grid ColumnDefinitions="58,*" Margin="0,1" Background="Transparent">
+                                <Grid.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="Copy Role Name" Command="{x:Static local:CopyCommand.Instance}" CommandParameter="{Binding Name}"/>
+                                        <MenuItem Header="Copy Role ID" Command="{x:Static local:CopyCommand.Instance}" CommandParameter="{Binding RoleId}"/>
+                                    </ContextMenu>
+                                </Grid.ContextMenu>
                                 <Border Grid.Column="0"
                                         Background="{Binding TypeColor}"
                                         CornerRadius="5" Padding="3,2"
@@ -155,7 +165,12 @@
                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate x:DataType="models:RoleMemberItem">
-                                        <Grid ColumnDefinitions="70,1.4*,1.6*" Height="34">
+                                        <Grid ColumnDefinitions="70,1.4*,1.6*" Height="34" Background="Transparent">
+                                            <Grid.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem Header="Copy Name" Command="{x:Static local:CopyCommand.Instance}" CommandParameter="{Binding Name}"/>
+                                                </ContextMenu>
+                                            </Grid.ContextMenu>
                                             <Border Grid.Column="0" Background="{Binding KindColor}"
                                                     CornerRadius="4" Padding="5,1"
                                                     HorizontalAlignment="Left" VerticalAlignment="Center"
@@ -276,7 +291,12 @@
                                         <ListBox.ItemTemplate>
                                             <DataTemplate x:DataType="models:RolePrivilegeRow">
                                                 <Grid Height="32" Width="950"
-                                                      ColumnDefinitions="170,150,70,70,70,70,70,70,70,70,70">
+                                                      ColumnDefinitions="170,150,70,70,70,70,70,70,70,70,70" Background="Transparent">
+                                                    <Grid.ContextMenu>
+                                                        <ContextMenu>
+                                                            <MenuItem Header="Copy Logical Name" Command="{x:Static local:CopyCommand.Instance}" CommandParameter="{Binding LogicalName}"/>
+                                                        </ContextMenu>
+                                                    </Grid.ContextMenu>
                                                     <TextBlock Grid.Column="0" Text="{Binding Title}"
                                                                FontSize="12" Foreground="#1C1C1E"
                                                                VerticalAlignment="Center" ClipToBounds="True"

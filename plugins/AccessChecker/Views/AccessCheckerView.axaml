@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:AccessChecker.ViewModels"
              xmlns:models="using:AccessChecker.Models"
+             xmlns:local="using:AccessChecker.Views"
              x:Class="AccessChecker.Views.AccessCheckerView"
              x:DataType="vm:AccessCheckerViewModel">
 
@@ -41,9 +42,19 @@
                          Background="Transparent" BorderThickness="0"
                          Padding="6,4"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.KeyBindings>
+                        <KeyBinding Gesture="Cmd+C" Command="{x:Static local:CopyCommand.Instance}" CommandParameter="{Binding SelectedUser.Name}"/>
+                    </ListBox.KeyBindings>
                     <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="models:UserItem">
-                            <Grid ColumnDefinitions="Auto,*" Margin="0,1">
+                            <Grid ColumnDefinitions="Auto,*" Margin="0,1" Background="Transparent">
+                                <Grid.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="Copy Name" Command="{x:Static local:CopyCommand.Instance}" CommandParameter="{Binding Name}"/>
+                                        <MenuItem Header="Copy Email" Command="{x:Static local:CopyCommand.Instance}" CommandParameter="{Binding Secondary}"/>
+                                        <MenuItem Header="Copy User ID" Command="{x:Static local:CopyCommand.Instance}" CommandParameter="{Binding UserId}"/>
+                                    </ContextMenu>
+                                </Grid.ContextMenu>
                                 <Border Grid.Column="0"
                                         Background="{Binding BadgeColor}"
                                         CornerRadius="7" Width="30" Height="30"
@@ -205,7 +216,12 @@
                                         <ListBox.ItemTemplate>
                                             <DataTemplate x:DataType="models:PrivilegeRow">
                                                 <Grid Height="32" Width="950"
-                                                      ColumnDefinitions="170,150,70,70,70,70,70,70,70,70,70">
+                                                      ColumnDefinitions="170,150,70,70,70,70,70,70,70,70,70" Background="Transparent">
+                                                    <Grid.ContextMenu>
+                                                        <ContextMenu>
+                                                            <MenuItem Header="Copy Logical Name" Command="{x:Static local:CopyCommand.Instance}" CommandParameter="{Binding LogicalName}"/>
+                                                        </ContextMenu>
+                                                    </Grid.ContextMenu>
                                                     <TextBlock Grid.Column="0" Text="{Binding Title}"
                                                                FontSize="12" Foreground="#1C1C1E"
                                                                VerticalAlignment="Center" ClipToBounds="True"
@@ -338,7 +354,12 @@
                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate x:DataType="models:UserRoleItem">
-                                        <Grid ColumnDefinitions="90,1.6*,1.4*" Height="34">
+                                        <Grid ColumnDefinitions="90,1.6*,1.4*" Height="34" Background="Transparent">
+                                            <Grid.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem Header="Copy Role Name" Command="{x:Static local:CopyCommand.Instance}" CommandParameter="{Binding Name}"/>
+                                                </ContextMenu>
+                                            </Grid.ContextMenu>
                                             <Border Grid.Column="0" Background="{Binding SourceColor}"
                                                     CornerRadius="4" Padding="5,1"
                                                     HorizontalAlignment="Left" VerticalAlignment="Center"
@@ -443,7 +464,12 @@
                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate x:DataType="models:ComparisonRow">
-                                        <Grid Height="32" ColumnDefinitions="170,150,90,*,*">
+                                        <Grid Height="32" ColumnDefinitions="170,150,90,*,*" Background="Transparent">
+                                            <Grid.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem Header="Copy Logical Name" Command="{x:Static local:CopyCommand.Instance}" CommandParameter="{Binding LogicalName}"/>
+                                                </ContextMenu>
+                                            </Grid.ContextMenu>
                                             <Border Grid.Column="0" Width="3" Background="{Binding AccentColor}"
                                                     HorizontalAlignment="Left" VerticalAlignment="Stretch"/>
                                             <TextBlock Grid.Column="0" Text="{Binding Title}" FontSize="12" Foreground="#1C1C1E"

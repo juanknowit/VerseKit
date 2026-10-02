@@ -3,6 +3,7 @@
              xmlns:vm="using:FlowRuns.ViewModels"
              xmlns:models="using:FlowRuns.Models"
              xmlns:behaviors="using:FlowRuns.Behaviors"
+             xmlns:local="using:FlowRuns.Views"
              x:Class="FlowRuns.Views.FlowRunsView"
              x:Name="Root"
              x:DataType="vm:FlowRunsViewModel">
@@ -289,12 +290,26 @@
                                 </StackPanel>
                             </Grid>
                             <StackPanel Spacing="3">
-                                <TextBlock Text="RUN ID" FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93"/>
+                                <DockPanel>
+                                    <Button DockPanel.Dock="Right" Classes="IconBtn" Content="Copy"
+                                            FontSize="11" Padding="6,0" VerticalAlignment="Center"
+                                            Command="{x:Static local:CopyCommand.Instance}"
+                                            CommandParameter="{Binding SelectedRun.RunId}"/>
+                                    <TextBlock Text="RUN ID" FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93"
+                                               VerticalAlignment="Center"/>
+                                </DockPanel>
                                 <TextBox Classes="copy" Text="{Binding SelectedRun.RunId}" FontSize="12"
                                          Foreground="#636366" FontFamily="SF Mono,Menlo,monospace"/>
                             </StackPanel>
                             <StackPanel Spacing="3" IsVisible="{Binding SelectedRun.HasParent}">
-                                <TextBlock Text="PARENT RUN ID" FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93"/>
+                                <DockPanel>
+                                    <Button DockPanel.Dock="Right" Classes="IconBtn" Content="Copy"
+                                            FontSize="11" Padding="6,0" VerticalAlignment="Center"
+                                            Command="{x:Static local:CopyCommand.Instance}"
+                                            CommandParameter="{Binding SelectedRun.ParentRunId}"/>
+                                    <TextBlock Text="PARENT RUN ID" FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93"
+                                               VerticalAlignment="Center"/>
+                                </DockPanel>
                                 <TextBox Classes="copy" Text="{Binding SelectedRun.ParentRunId}" FontSize="12"
                                          Foreground="#636366" FontFamily="SF Mono,Menlo,monospace"/>
                             </StackPanel>
@@ -308,7 +323,14 @@
                                              Foreground="#FF3B30"/>
                                 </StackPanel>
                                 <StackPanel Spacing="3" IsVisible="{Binding SelectedRun.ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                                    <TextBlock Text="ERROR MESSAGE" FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93"/>
+                                    <DockPanel>
+                                        <Button DockPanel.Dock="Right" Classes="IconBtn" Content="Copy"
+                                                FontSize="11" Padding="6,0" VerticalAlignment="Center"
+                                                Command="{x:Static local:CopyCommand.Instance}"
+                                                CommandParameter="{Binding SelectedRun.ErrorMessage}"/>
+                                        <TextBlock Text="ERROR MESSAGE" FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93"
+                                                   VerticalAlignment="Center"/>
+                                    </DockPanel>
                                     <Border Background="#FBFBFD" BorderBrush="#E5E5EA" BorderThickness="1"
                                             CornerRadius="6" Padding="10" MaxHeight="280">
                                         <ScrollViewer>

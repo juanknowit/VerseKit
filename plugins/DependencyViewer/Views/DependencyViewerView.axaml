@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:DependencyViewer.ViewModels"
              xmlns:models="using:DependencyViewer.Models"
+             xmlns:local="using:DependencyViewer.Views"
              x:Class="DependencyViewer.Views.DependencyViewerView"
              x:DataType="vm:DependencyViewerViewModel">
 
@@ -38,9 +39,18 @@
                          SelectedItem="{Binding SelectedTable}"
                          Background="Transparent" BorderThickness="0" Padding="6,4"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.KeyBindings>
+                        <KeyBinding Gesture="Cmd+C" Command="{x:Static local:CopyCommand.Instance}" CommandParameter="{Binding SelectedTable.LogicalName}"/>
+                    </ListBox.KeyBindings>
                     <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="models:EntityListItem">
-                            <StackPanel Spacing="1" Margin="2,1">
+                            <StackPanel Spacing="1" Margin="2,1" Background="Transparent">
+                                <StackPanel.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="Copy Logical Name" Command="{x:Static local:CopyCommand.Instance}" CommandParameter="{Binding LogicalName}"/>
+                                        <MenuItem Header="Copy Display Name" Command="{x:Static local:CopyCommand.Instance}" CommandParameter="{Binding DisplayName}"/>
+                                    </ContextMenu>
+                                </StackPanel.ContextMenu>
                                 <TextBlock Text="{Binding Title}" FontSize="12" FontWeight="Medium"
                                            Foreground="#1C1C1E" TextTrimming="CharacterEllipsis"/>
                                 <TextBlock Text="{Binding LogicalName}" FontSize="10"
@@ -114,7 +124,12 @@
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                         <ListBox.ItemTemplate>
                             <DataTemplate x:DataType="models:DependencyItem">
-                                <Grid ColumnDefinitions="*,180,130" Height="38">
+                                <Grid ColumnDefinitions="*,180,130" Height="38" Background="Transparent">
+                                    <Grid.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="Copy Name" Command="{x:Static local:CopyCommand.Instance}" CommandParameter="{Binding Name}"/>
+                                        </ContextMenu>
+                                    </Grid.ContextMenu>
                                     <StackPanel Grid.Column="0" Spacing="1" VerticalAlignment="Center" Margin="16,0,6,0">
                                         <TextBlock Text="{Binding Name}" FontSize="12" Foreground="#1C1C1E"
                                                    TextTrimming="CharacterEllipsis"/>
