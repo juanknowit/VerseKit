@@ -20,6 +20,26 @@ public sealed class PrivilegeRow
 
     public string Title => string.IsNullOrWhiteSpace(Table) ? LogicalName : Table;
 
+    /// <summary>The "Why" panel lines: each privilege the table supports and
+    /// the roles that grant it.</summary>
+    public IReadOnlyList<WhyLine> Why =>
+    [
+        .. new (string Label, AccessCell Cell)[]
+        {
+            ("Create", Create), ("Read", Read), ("Write", Write), ("Delete", Delete),
+            ("Append", Append), ("Append To", AppendTo), ("Assign", Assign), ("Share", Share),
+        }
+        .Where(p => p.Cell.Applicable)
+        .Select(p => new WhyLine
+        {
+            Privilege = p.Label,
+            Cell = p.Cell,
+            GrantedBy = p.Cell.Grants.Count == 0
+                ? "Not granted by any of the user's roles"
+                : string.Join("  ·  ", p.Cell.Grants.Select(g => $"{g.Role} ({g.SourceLabel}) — {AccessCell.DepthLabel(g.Depth)}")),
+        })
+    ];
+
     /// <summary>True if the user has at least one privilege granted on this table.</summary>
     public bool HasAnyAccess =>
         IsGranted(Create) || IsGranted(Read) || IsGranted(Write) || IsGranted(Delete)
