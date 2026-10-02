@@ -113,6 +113,13 @@ appear/intensify on hover or focus. No drop shadows (see §8).
 Rules:
 - **At most one `Primary`/`Success` per button group.** Everything else is default white.
 - **Red is exclusively destructive.** Never use `Danger` for a normal action.
+- **No red buttons inside lists.** Per-row actions live in a quiet `IconBtn` "⋯"
+  with a `MenuFlyout`; destructive entries there use `MenuItem.Destructive` (red
+  text, e.g. "Remove…") and always lead to a confirmation, whose confirm button
+  carries the red. Reserve `Danger` pills for a sheet's own destructive action
+  (e.g. Delete in the Connection sheet).
+- **A button keeps its text colour on hover/press** (App.axaml overrides Fluent,
+  which otherwise forces near-black onto the content — see §8).
 - Button text is always `TextPrimaryBrush` except `Danger` (red). No white-on-color.
 - Standard padding `16,7`; group spacing `8px`.
 
@@ -325,7 +332,14 @@ These cost real iteration. Respect them:
     the outgoing view in the tree during the fade; a plugin that returns a cached
     view from `CreateView()` would then be in two places at once and throw. Fade
     the incoming view only (`ContentControl.Workspace`).
-11. **A full-bleed `Button` used as a scrim** inherits the grey hover/press pill
+11. **Fluent recolours button text on hover/press.** Its `:pointerover`/`:pressed`
+    rules set `ButtonForegroundPointerOver`/`Pressed` (near-black) on the
+    `ContentPresenter`, and plain-text content has no `TextBlock` for
+    `Button:pointerover TextBlock` rules to reach — so red/grey/accent text
+    buttons flipped to black. `App.axaml` binds the presenter's Foreground back
+    to the button's in those states; style a button's text colour via its
+    `Foreground`, not via descendant `TextBlock` selectors.
+12. **A full-bleed `Button` used as a scrim** inherits the grey hover/press pill
     fill. Give it the `Scrim` class and pin its hover/pressed background.
 
 ---

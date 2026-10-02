@@ -842,20 +842,34 @@
                                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                     </Border>
 
-                                                    <!-- Enable toggle (far right) -->
+                                                    <!-- ⋯ actions (macOS style: no red in the list;
+                                                         "Remove…" is red in the menu, and the
+                                                         confirmation dialog carries the emphasis) -->
+                                                    <Button DockPanel.Dock="Right" Classes="IconBtn"
+                                                            Content="⋯" FontSize="15" Padding="7,0,7,2"
+                                                            Margin="6,0,0,0" VerticalAlignment="Center"
+                                                            ToolTip.Tip="More actions">
+                                                        <Button.Flyout>
+                                                            <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                                                <MenuItem Header="Show in Finder"
+                                                                          Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).ShowPluginInFinderCommand}"
+                                                                          CommandParameter="{Binding}"/>
+                                                                <Separator IsVisible="{Binding IsRemovable}"/>
+                                                                <MenuItem Header="Remove…" Classes="Destructive"
+                                                                          IsVisible="{Binding IsRemovable}"
+                                                                          Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).RemovePluginCommand}"
+                                                                          CommandParameter="{Binding}"/>
+                                                            </MenuFlyout>
+                                                        </Button.Flyout>
+                                                    </Button>
+
+                                                    <!-- Enable toggle (left of the ⋯) -->
                                                     <ToggleSwitch DockPanel.Dock="Right"
                                                                   OnContent="" OffContent=""
                                                                   MinWidth="0"
                                                                   VerticalAlignment="Center"
                                                                   IsChecked="{Binding IsEnabled, Mode=TwoWay}"/>
 
-                                                    <!-- Remove (installed only) -->
-                                                    <Button DockPanel.Dock="Right"
-                                                            Classes="Danger" Content="Remove"
-                                                            Margin="0,0,10,0" VerticalAlignment="Center"
-                                                            IsVisible="{Binding IsRemovable}"
-                                                            Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).RemovePluginCommand}"
-                                                            CommandParameter="{Binding}"/>
 
                                                     <!-- Name / version / origin / description -->
                                                     <StackPanel VerticalAlignment="Center" Spacing="2">

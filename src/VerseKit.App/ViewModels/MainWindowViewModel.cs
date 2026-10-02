@@ -552,6 +552,17 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    /// <summary>Reveals the plugin's assembly in Finder (⋯ menu in the Plugins sheet).</summary>
+    [RelayCommand]
+    private void ShowPluginInFinder(PluginItemViewModel? item)
+    {
+        if (item is null) return;
+        var psi = new ProcessStartInfo("open") { UseShellExecute = false };
+        psi.ArgumentList.Add("-R");
+        psi.ArgumentList.Add(item.Entry.AssemblyPath);
+        Process.Start(psi);
+    }
+
     [RelayCommand]
     private async Task RemovePluginAsync(PluginItemViewModel? item)
     {

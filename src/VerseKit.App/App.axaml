@@ -176,6 +176,14 @@
         <Style Selector="Button:disabled /template/ ContentPresenter">
             <Setter Property="Opacity" Value="0.45"/>
         </Style>
+        <!-- Keep each button's own text colour on hover/press. Fluent forces
+             ButtonForegroundPointerOver/Pressed (near-black) onto the content
+             presenter, and text content has no TextBlock for the TextBlock rules
+             to reach — so red (Danger), grey (IconBtn) and accent text flipped to
+             black under the pointer. -->
+        <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Foreground" Value="{Binding $parent[Button].Foreground}"/>
+        </Style>
         <!-- Ghost buttons (icon, sidebar rows) carry no edge -->
         <Style Selector="Button.IconBtn, Button.SidebarProfile, Button.DeleteBtn">
             <Setter Property="BorderThickness" Value="0"/>
@@ -198,6 +206,13 @@
             <Setter Property="Background" Value="{StaticResource DangerTintPressedBrush}"/>
         </Style>
         <Style Selector="Button.Danger:pressed TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource DangerTextBrush}"/>
+        </Style>
+
+        <!-- ── Destructive menu item (e.g. "Remove…" in a ⋯ menu) ──
+             macOS style: red text in the menu; the confirmation that follows
+             carries the destructive emphasis. Stays red when highlighted. -->
+        <Style Selector="MenuItem.Destructive /template/ ContentPresenter#PART_HeaderPresenter, MenuItem.Destructive:selected /template/ ContentPresenter#PART_HeaderPresenter">
             <Setter Property="Foreground" Value="{StaticResource DangerTextBrush}"/>
         </Style>
 
