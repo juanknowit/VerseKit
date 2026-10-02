@@ -157,6 +157,18 @@ and rejected. Focus is indicated by the caret and selection only — keep it qui
   Plugins sheet `0%,50%` — both opened from the sidebar). See §7.
 - **Status chip** (`Border.StatusChip`): neutral grey; `.connected` class swaps to a
   solid pale-green fill (`#E3F5E9`). No animation.
+- **Data tables** (`DataGrid.Table`): plugins that use Avalonia's `DataGrid` (Flow
+  Runs, Query Runner) restyle the stock Fluent grid to match the list styles:
+  12pt cells, 30px rows, `#EFEFF2` hairline row separators (no zebra — the
+  DataGrid recycles rows, so `:nth-child` stripes would shuffle on scroll), a
+  `#FAFAFB` header with 11pt SemiBold `#6E6E73` labels, hover `#0A000000`,
+  selection `{DynamicResource TintBrush}` with dark text (the Fluent default fills
+  the selected row with the saturated accent), no cell focus box, and lighter
+  checkboxes. The styles live in each plugin's `UserControl.Styles` right after
+  the DataGrid `StyleInclude` (they must beat that theme, and keep working on
+  older hosts) — copy them from Flow Runs for a new grid. Per-row actions are
+  quiet `IconBtn` links that take the accent on row hover/selection, and
+  double-clicking a row opens it.
 - **Sidebar list** (`ListBox.SidebarList`): selection is a pale accent tint
   (`{DynamicResource TintBrush}`, derived from the chosen accent) with dark text,
   Finder-style — not a saturated fill.

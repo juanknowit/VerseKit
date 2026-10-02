@@ -14,6 +14,80 @@
 
     <UserControl.Styles>
         <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
+        <!-- ══ Table look for DataGrid ════════════════════════════════
+             Restyles the stock Fluent DataGrid to match the tools' list
+             styles (DESIGN.md §5 "Data tables"): compact 12pt rows,
+             hairline separators, a quiet header, hover wash and a pale
+             accent selection with dark text (the Fluent default fills the
+             selected row with the saturated accent). Local to the plugin
+             so it applies on any host version. -->
+        <Style Selector="DataGrid.Table">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="#1C1C1E"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="RowHeight" Value="30"/>
+            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="#EFEFF2"/>
+        </Style>
+        <Style Selector="DataGrid.Table /template/ Rectangle#PART_ColumnHeadersAndRowsSeparator">
+            <Setter Property="Fill" Value="#E5E5EA"/>
+        </Style>
+        <Style Selector="DataGrid.Table DataGridColumnHeader">
+            <Setter Property="Background" Value="#FAFAFB"/>
+            <Setter Property="Foreground" Value="#6E6E73"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="MinHeight" Value="28"/>
+            <Setter Property="Padding" Value="12,0,0,0"/>
+            <Setter Property="SeparatorBrush" Value="#E5E5EA"/>
+        </Style>
+        <Style Selector="DataGrid.Table DataGridColumnHeader:pointerover /template/ Grid#PART_ColumnHeaderRoot">
+            <Setter Property="Background" Value="#F2F2F5"/>
+        </Style>
+        <Style Selector="DataGrid.Table DataGridColumnHeader:pressed /template/ Grid#PART_ColumnHeaderRoot">
+            <Setter Property="Background" Value="#EAEAEE"/>
+        </Style>
+        <Style Selector="DataGrid.Table DataGridCell">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="MinHeight" Value="30"/>
+        </Style>
+        <!-- No black focus/currency box around the clicked cell -->
+        <Style Selector="DataGrid.Table DataGridCell /template/ Grid#FocusVisual, DataGrid.Table DataGridCell /template/ Rectangle#CurrencyVisual">
+            <Setter Property="IsVisible" Value="False"/>
+        </Style>
+        <Style Selector="DataGrid.Table DataGridRow:pointerover /template/ Rectangle#BackgroundRectangle">
+            <Setter Property="Fill" Value="#0A000000"/>
+            <Setter Property="Opacity" Value="1"/>
+        </Style>
+        <Style Selector="DataGrid.Table DataGridRow:selected /template/ Rectangle#BackgroundRectangle">
+            <Setter Property="Fill" Value="{DynamicResource TintBrush}"/>
+            <Setter Property="Opacity" Value="1"/>
+        </Style>
+        <Style Selector="DataGrid.Table DataGridRow:selected:pointerover /template/ Rectangle#BackgroundRectangle">
+            <Setter Property="Fill" Value="{DynamicResource TintHoverBrush}"/>
+        </Style>
+        <!-- Lighter, slightly smaller checkboxes (the stock box is a heavy
+             20px square). Scaled rather than resized so the glyph stays
+             centred; checked keeps the theme's accent fill. -->
+        <Style Selector="DataGrid.Table CheckBox">
+            <Setter Property="CornerRadius" Value="5"/>
+            <Setter Property="RenderTransform" Value="scale(0.85)"/>
+        </Style>
+        <Style Selector="DataGrid.Table CheckBox:unchecked /template/ Border#NormalRectangle">
+            <Setter Property="BorderBrush" Value="#C7C7CC"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="White"/>
+        </Style>
+        <Style Selector="DataGrid.Table CheckBox:unchecked:pointerover /template/ Border#NormalRectangle">
+            <Setter Property="BorderBrush" Value="#8E8E93"/>
+        </Style>
+        <!-- Row "Details ›" stays quiet until its row is hovered or selected -->
+        <Style Selector="DataGrid.Table Button.RowAction">
+            <Setter Property="Foreground" Value="#8E8E93"/>
+        </Style>
+        <Style Selector="DataGrid.Table DataGridRow:pointerover Button.RowAction, DataGrid.Table DataGridRow:selected Button.RowAction">
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}"/>
+        </Style>
         <!-- Selectable/copyable read-only text. SelectableTextBlock crashes the
              render thread on empty text (Avalonia bug), so we use a flat TextBox. -->
         <Style Selector="TextBox.copy">
@@ -173,16 +247,14 @@
         </Border>
 
         <!-- ══ Runs grid ══════════════════════════════════════════════ -->
-        <DataGrid Classes="Appear" Grid.Row="2" x:Name="RunsGrid"
+        <DataGrid Classes="Appear Table" Grid.Row="2" x:Name="RunsGrid"
                   IsVisible="{Binding ShowContent}"
                   ItemsSource="{Binding Runs}"
                   AutoGenerateColumns="False"
                   IsReadOnly="True"
                   CanUserResizeColumns="True"
                   CanUserSortColumns="True"
-                  GridLinesVisibility="Horizontal"
-                  HeadersVisibility="Column"
-                  FontSize="12">
+                  HeadersVisibility="Column">
             <DataGrid.Columns>
                 <DataGridTemplateColumn Width="46" CanUserResize="False" CanUserSort="False">
                     <DataGridTemplateColumn.Header>
@@ -217,8 +289,9 @@
                 <DataGridTemplateColumn Width="Auto" CanUserResize="False" CanUserSort="False">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate x:DataType="models:FlowRunItem">
-                            <Button Content="Details" FontSize="11" Padding="10,3" Margin="6,0"
-                                    VerticalAlignment="Center"
+                            <Button Classes="IconBtn RowAction" Content="Details ›" FontSize="11"
+                                    Padding="8,2" Margin="6,0" VerticalAlignment="Center"
+                                    ToolTip.Tip="Show run details (or double-click the row)"
                                     Command="{ReflectionBinding DataContext.InspectCommand, ElementName=Root}"
                                     CommandParameter="{ReflectionBinding}"/>
                         </DataTemplate>
