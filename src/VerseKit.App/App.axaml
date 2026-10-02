@@ -337,5 +337,147 @@
             <Setter Property="BoxShadow" Value="0 6 20 2 #2E000000"/>
             <Setter Property="Background" Value="White"/>
         </Style>
+
+        <!-- ══ Motion ════════════════════════════════════════════════
+             Apple-style fluid motion (see DESIGN.md §7). Rules:
+             respond on pointer-down, animate from the current value
+             (Avalonia transitions are interruptible), exit along the
+             entry path, and honour macOS Reduce Motion (Window.ReduceMotion).
+
+             Springs: Avalonia's SpringEasing runs in normalised time
+             (0..1 of the transition Duration), so Apple's "response" R is
+             converted as ωn = 2π/R × Duration, Stiffness = ωn², Damping =
+             2ωn (damping ratio 1.0 — critically damped, no overshoot). The
+             Duration is sized so the spring has settled (<0.5%) by the end.
+               Sheet:  R 0.35s, Duration 0.45s → Stiffness 65, Damping 16.2
+               Swatch: R 0.30s, Duration 0.35s → Stiffness 54, Damping 14.7 -->
+
+        <!-- Modal sheet overlay. Pair with behaviors:Sheet.IsOpen, which adds
+             the "open" class and hides the overlay once it has faded out. -->
+        <Style Selector="Panel.SheetOverlay">
+            <Setter Property="IsVisible" Value="False"/>
+            <Setter Property="Opacity" Value="0"/>
+            <Setter Property="IsHitTestVisible" Value="False"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.2" Easing="CubicEaseOut"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Panel.SheetOverlay.open">
+            <Setter Property="Opacity" Value="1"/>
+            <Setter Property="IsHitTestVisible" Value="True"/>
+        </Style>
+        <!-- Materialise: scale up from 96% anchored toward the control that
+             opened it (set RenderTransformOrigin on the card; default is the
+             top-right Settings cog) and shrink back along the same path. -->
+        <Style Selector="Panel.SheetOverlay > Border.FormCard">
+            <Setter Property="RenderTransformOrigin" Value="100%,0%"/>
+            <Setter Property="RenderTransform" Value="scale(0.96)"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.45">
+                        <TransformOperationsTransition.Easing>
+                            <SpringEasing Mass="1" Stiffness="65" Damping="16.2"/>
+                        </TransformOperationsTransition.Easing>
+                    </TransformOperationsTransition>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Panel.SheetOverlay.open > Border.FormCard">
+            <Setter Property="RenderTransform" Value="scale(1)"/>
+        </Style>
+
+        <!-- Press feedback on pointer-down: a quick dip on every button.
+             Small targets dip further so the response is visible; full-width
+             rows and scrims keep their press fill instead (a 3% shrink of a
+             wide row reads as a jump). -->
+        <Style Selector="Button">
+            <Setter Property="RenderTransform" Value="scale(1)"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" Easing="CubicEaseOut"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button:pressed">
+            <Setter Property="RenderTransform" Value="scale(0.97)"/>
+        </Style>
+        <Style Selector="Button.IconBtn:pressed, Button.DeleteBtn:pressed, Button.Swatch:pressed">
+            <Setter Property="RenderTransform" Value="scale(0.9)"/>
+        </Style>
+        <Style Selector="Button.SidebarProfile:pressed, Button.Scrim:pressed">
+            <Setter Property="RenderTransform" Value="scale(1)"/>
+        </Style>
+        <!-- Hover-revealed row affordances fade in; keeps the press dip too.
+             (Must follow the shared Button rule — later styles win.) -->
+        <Style Selector="Button.DeleteBtn">
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.12" Easing="CubicEaseOut"/>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" Easing="CubicEaseOut"/>
+                </Transitions>
+            </Setter>
+        </Style>
+
+        <!-- Content that appears (details panes, empty states, the welcome
+             screen) fades in rather than popping. Opacity only, so it is
+             also safe under Reduce Motion. -->
+        <Style Selector=":is(Control).Appear[IsVisible=true]">
+            <Style.Animations>
+                <Animation Duration="0:0:0.18" Easing="CubicEaseOut">
+                    <KeyFrame Cue="0%">
+                        <Setter Property="Opacity" Value="0"/>
+                    </KeyFrame>
+                    <KeyFrame Cue="100%">
+                        <Setter Property="Opacity" Value="1"/>
+                    </KeyFrame>
+                </Animation>
+            </Style.Animations>
+        </Style>
+        <!-- A newly opened tool fades in (the outgoing view is removed
+             immediately, so one control is never in two places). -->
+        <Style Selector="ContentControl.Workspace /template/ ContentPresenter > :is(Control)">
+            <Style.Animations>
+                <Animation Duration="0:0:0.18" Easing="CubicEaseOut">
+                    <KeyFrame Cue="0%">
+                        <Setter Property="Opacity" Value="0"/>
+                    </KeyFrame>
+                    <KeyFrame Cue="100%">
+                        <Setter Property="Opacity" Value="1"/>
+                    </KeyFrame>
+                </Animation>
+            </Style.Animations>
+        </Style>
+
+        <!-- Accent swatch selection ring grows in rather than popping. -->
+        <Style Selector="Ellipse.SwatchRing">
+            <Setter Property="Opacity" Value="0"/>
+            <Setter Property="RenderTransform" Value="scale(0.7)"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.15" Easing="CubicEaseOut"/>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.35">
+                        <TransformOperationsTransition.Easing>
+                            <SpringEasing Mass="1" Stiffness="54" Damping="14.7"/>
+                        </TransformOperationsTransition.Easing>
+                    </TransformOperationsTransition>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Ellipse.SwatchRing.selected">
+            <Setter Property="Opacity" Value="1"/>
+            <Setter Property="RenderTransform" Value="scale(1)"/>
+        </Style>
+
+        <!-- Reduce motion (macOS Accessibility): no scaling or sliding —
+             sheets and rings simply cross-fade. Must stay after the rules
+             above so these win. -->
+        <Style Selector="Window.ReduceMotion Panel.SheetOverlay > Border.FormCard">
+            <Setter Property="RenderTransform" Value="scale(1)"/>
+        </Style>
+        <Style Selector="Window.ReduceMotion Ellipse.SwatchRing">
+            <Setter Property="RenderTransform" Value="scale(1)"/>
+        </Style>
     </Application.Styles>
 </Application>

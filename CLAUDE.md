@@ -65,6 +65,13 @@ theming lives in `src/VerseKit.App/App.axaml` and is inherited by plugins —
 extend the shared styles, don't redefine per-view. Keep new UI consistent with the
 DESIGN.md checklist.
 
+Motion follows Apple's fluid-interface principles (DESIGN.md §7): instant
+press feedback, interruptible critically-damped springs, exits that retrace their
+entry, and macOS *Reduce Motion* respected. Modal overlays use
+`Panel.SheetOverlay` + `behaviors:Sheet.IsOpen` — never a bare `IsVisible`
+toggle. Plugins must still work on older hosts, so anything a plugin's layout
+depends on must be self-contained in the plugin.
+
 ## Coding Conventions
 
 - **MVVM pattern** for all Avalonia views. ViewModels in `ViewModels/`, Views in `Views/`.

@@ -90,11 +90,11 @@
             <Grid Grid.Column="2" RowDefinitions="Auto,*" Background="White">
 
                 <!-- Empty state -->
-                <StackPanel Grid.Row="0" Grid.RowSpan="2"
+                <StackPanel Classes="Appear" Grid.Row="0" Grid.RowSpan="2"
                             IsVisible="{Binding !IsUserSelected}"
                             HorizontalAlignment="Center" VerticalAlignment="Center"
                             Spacing="8">
-                    <TextBlock Text="Select a user" FontSize="16" FontWeight="Light"
+                    <TextBlock Text="Select a user" FontSize="16" FontWeight="Light" LetterSpacing="-0.3"
                                Foreground="#8E8E93" HorizontalAlignment="Center"/>
                     <TextBlock Text="Pick a user on the left to see their effective access and roles."
                                FontSize="13" Foreground="#AEAEB2"
@@ -102,13 +102,13 @@
                 </StackPanel>
 
                 <!-- Header -->
-                <Border Grid.Row="0" IsVisible="{Binding IsUserSelected}"
+                <Border Classes="Appear" Grid.Row="0" IsVisible="{Binding IsUserSelected}"
                         Background="#F8F8FA" BorderBrush="#E5E5EA"
                         BorderThickness="0,0,0,1" Padding="16,10">
                     <Grid ColumnDefinitions="*,Auto">
                         <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
                             <TextBlock Text="{Binding SelectedUser.Title}"
-                                       FontSize="14" FontWeight="SemiBold" Foreground="#1C1C1E"/>
+                                       FontSize="14" FontWeight="SemiBold" LetterSpacing="-0.15" Foreground="#1C1C1E"/>
                             <TextBlock Text="{Binding SelectedUser.Secondary}"
                                        FontSize="11" Foreground="#636366"/>
                         </StackPanel>
@@ -121,7 +121,7 @@
                 </Border>
 
                 <!-- Tabs: Effective access | Roles -->
-                <TabControl Grid.Row="1" IsVisible="{Binding IsUserSelected}"
+                <TabControl Classes="Appear" Grid.Row="1" IsVisible="{Binding IsUserSelected}"
                             SelectedIndex="{Binding DetailTabIndex}"
                             Padding="0" Margin="0">
 
@@ -413,9 +413,9 @@
                                          IsVisible="{Binding IsCompareLoading}" Height="2" Margin="0"/>
 
                             <!-- Empty state when no compare user chosen -->
-                            <StackPanel DockPanel.Dock="Top" Margin="0,40,0,0" Spacing="6"
+                            <StackPanel Classes="Appear" DockPanel.Dock="Top" Margin="0,40,0,0" Spacing="6"
                                         IsVisible="{Binding CompareUser, Converter={x:Static ObjectConverters.IsNull}}">
-                                <TextBlock Text="Pick a user to compare" FontSize="15" FontWeight="Light"
+                                <TextBlock Text="Pick a user to compare" FontSize="15" FontWeight="Light" LetterSpacing="-0.2"
                                            Foreground="#8E8E93" HorizontalAlignment="Center"/>
                                 <TextBlock Text="Choose a second user above to see where their effective access differs."
                                            FontSize="12" Foreground="#AEAEB2" HorizontalAlignment="Center"/>

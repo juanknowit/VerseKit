@@ -15,7 +15,7 @@ public sealed class FlowRunsPlugin : IVerseKitPlugin
     public Guid PluginId => new("b8c9d0e1-f2a3-4567-bcde-000000000000");
     public string Name => "Flow Runs";
     public string Description => "View and export cloud flow run history — succeeded and failed — read only";
-    public string Version => "1.0.0";
+    public string Version => "1.0.1";
 
     private IConnectionProvider? _connectionProvider;
 

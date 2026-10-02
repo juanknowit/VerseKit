@@ -15,7 +15,7 @@ public sealed class DependencyViewerPlugin : IVerseKitPlugin
     public Guid PluginId => new("a7b8c9d0-e1f2-3456-abcd-789012345671");
     public string Name => "Dependency Viewer";
     public string Description => "See what depends on a table before deleting it — read only";
-    public string Version => "1.0.0";
+    public string Version => "1.0.1";
 
     private IConnectionProvider? _connectionProvider;
 

@@ -78,6 +78,9 @@ public partial class MainWindowViewModel : ViewModelBase
     // Settings & updates
     [ObservableProperty] private bool _isSettingsPanelVisible;
 
+    /// <summary>macOS "Reduce motion" — styles swap movement for cross-fades.</summary>
+    public bool ReduceMotion { get; } = MacAccessibility.ShouldReduceMotion();
+
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(DownloadUpdateCommand))]
     private bool _isUpdateAvailable;

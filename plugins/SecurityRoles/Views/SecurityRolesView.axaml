@@ -90,11 +90,11 @@
             <Grid Grid.Column="2" RowDefinitions="Auto,*" Background="White">
 
                 <!-- Empty state -->
-                <StackPanel Grid.Row="0" Grid.RowSpan="2"
+                <StackPanel Classes="Appear" Grid.Row="0" Grid.RowSpan="2"
                             IsVisible="{Binding !IsRoleSelected}"
                             HorizontalAlignment="Center" VerticalAlignment="Center"
                             Spacing="8">
-                    <TextBlock Text="Select a role" FontSize="16" FontWeight="Light"
+                    <TextBlock Text="Select a role" FontSize="16" FontWeight="Light" LetterSpacing="-0.3"
                                Foreground="#8E8E93" HorizontalAlignment="Center"/>
                     <TextBlock Text="Pick a role on the left to see members and table permissions."
                                FontSize="13" Foreground="#AEAEB2"
@@ -102,13 +102,13 @@
                 </StackPanel>
 
                 <!-- Header -->
-                <Border Grid.Row="0" IsVisible="{Binding IsRoleSelected}"
+                <Border Classes="Appear" Grid.Row="0" IsVisible="{Binding IsRoleSelected}"
                         Background="#F8F8FA" BorderBrush="#E5E5EA"
                         BorderThickness="0,0,0,1" Padding="16,10">
                     <Grid ColumnDefinitions="*,Auto">
                         <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
                             <TextBlock Text="{Binding SelectedRole.Title}"
-                                       FontSize="14" FontWeight="SemiBold" Foreground="#1C1C1E"/>
+                                       FontSize="14" FontWeight="SemiBold" LetterSpacing="-0.15" Foreground="#1C1C1E"/>
                             <TextBlock Text="{Binding SelectedRole.BusinessUnit, StringFormat='BU: {0}'}"
                                        FontSize="11" Foreground="#636366"/>
                         </StackPanel>
@@ -119,7 +119,7 @@
                 </Border>
 
                 <!-- Tabs: Members | Table permissions -->
-                <TabControl Grid.Row="1" IsVisible="{Binding IsRoleSelected}"
+                <TabControl Classes="Appear" Grid.Row="1" IsVisible="{Binding IsRoleSelected}"
                             SelectedIndex="{Binding DetailTabIndex}"
                             Padding="0" Margin="0">
 

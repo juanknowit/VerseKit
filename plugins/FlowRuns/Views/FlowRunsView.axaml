@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:FlowRuns.ViewModels"
              xmlns:models="using:FlowRuns.Models"
+             xmlns:behaviors="using:FlowRuns.Behaviors"
              x:Class="FlowRuns.Views.FlowRunsView"
              x:Name="Root"
              x:DataType="vm:FlowRunsViewModel">
@@ -17,6 +18,51 @@
             <Setter Property="Padding" Value="0"/>
             <Setter Property="MinHeight" Value="0"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+
+        <!-- Detail drawer motion (self-contained so it works on any host).
+             The panel slides in from the right edge and leaves the same way
+             on a critically damped spring (Apple response 0.35s; see the
+             Motion section of docs/DESIGN.md for the conversion). The whole
+             overlay fades on an ease-in-out so the panel is still visible
+             while it slides out; Drawer.IsOpen hides it once faded. -->
+        <Style Selector="Grid.Drawer">
+            <Setter Property="IsVisible" Value="False"/>
+            <Setter Property="Opacity" Value="0"/>
+            <Setter Property="IsHitTestVisible" Value="False"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.3" Easing="SineEaseInOut"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Grid.Drawer.open">
+            <Setter Property="Opacity" Value="1"/>
+            <Setter Property="IsHitTestVisible" Value="True"/>
+        </Style>
+        <Style Selector="Grid.Drawer > Border.DrawerPanel">
+            <Setter Property="RenderTransform" Value="translateX(500px)"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.45">
+                        <TransformOperationsTransition.Easing>
+                            <SpringEasing Mass="1" Stiffness="65" Damping="16.2"/>
+                        </TransformOperationsTransition.Easing>
+                    </TransformOperationsTransition>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Grid.Drawer.open > Border.DrawerPanel">
+            <Setter Property="RenderTransform" Value="translateX(0px)"/>
+        </Style>
+        <!-- The scrim is a Button only so a click outside closes; keep the
+             host's grey hover/press pill fill from painting over it. -->
+        <Style Selector="Button.Scrim:pointerover /template/ ContentPresenter, Button.Scrim:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="#33000000"/>
+        </Style>
+        <!-- macOS Reduce Motion (host sets Window.ReduceMotion): fade only -->
+        <Style Selector="Window.ReduceMotion Grid.Drawer > Border.DrawerPanel">
+            <Setter Property="RenderTransform" Value="translateX(0px)"/>
         </Style>
     </UserControl.Styles>
 
@@ -77,7 +123,7 @@
         </Border>
 
         <!-- ══ Summary / status bar ═══════════════════════════════════ -->
-        <Border Grid.Row="1" BorderBrush="#E5E5EA" BorderThickness="0,0,0,1" Padding="16,8"
+        <Border Classes="Appear" Grid.Row="1" BorderBrush="#E5E5EA" BorderThickness="0,0,0,1" Padding="16,8"
                 Background="#FBFBFD" IsVisible="{Binding ShowContent}">
             <DockPanel>
                 <ProgressBar DockPanel.Dock="Bottom" IsIndeterminate="True" Height="2" Margin="0,8,0,0"
@@ -94,20 +140,20 @@
         </Border>
 
         <!-- ══ Connect prompt ═════════════════════════════════════════ -->
-        <StackPanel Grid.Row="2" IsVisible="{Binding ShowConnectPrompt}"
+        <StackPanel Classes="Appear" Grid.Row="2" IsVisible="{Binding ShowConnectPrompt}"
                     HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
-            <TextBlock Text="Not connected" FontSize="16" FontWeight="Light"
+            <TextBlock Text="Not connected" FontSize="16" FontWeight="Light" LetterSpacing="-0.3"
                        Foreground="#8E8E93" HorizontalAlignment="Center"/>
             <TextBlock Text="Connect to an environment to view cloud flow run history."
                        FontSize="13" Foreground="#AEAEB2" HorizontalAlignment="Center"/>
         </StackPanel>
 
         <!-- ══ Feature-not-enabled panel ══════════════════════════════ -->
-        <Border Grid.Row="2" IsVisible="{Binding ShowNotEnabled}"
+        <Border Classes="Appear" Grid.Row="2" IsVisible="{Binding ShowNotEnabled}"
                 Padding="40" MaxWidth="560" VerticalAlignment="Center" HorizontalAlignment="Center">
             <StackPanel Spacing="12">
                 <TextBlock Text="Run history isn't stored in Dataverse for this environment"
-                           FontSize="16" FontWeight="SemiBold" Foreground="#1C1C1E"
+                           FontSize="16" FontWeight="SemiBold" LetterSpacing="-0.3" Foreground="#1C1C1E"
                            TextWrapping="Wrap" HorizontalAlignment="Center" TextAlignment="Center"/>
                 <TextBlock TextWrapping="Wrap" FontSize="13" Foreground="#636366" TextAlignment="Center"
                            Text="Cloud flow run history in Dataverse is turned off (time-to-live is 0), so there are no run records to read. An administrator can enable it in the Power Platform admin center:"/>
@@ -122,7 +168,7 @@
         </Border>
 
         <!-- ══ Runs grid ══════════════════════════════════════════════ -->
-        <DataGrid Grid.Row="2" x:Name="RunsGrid"
+        <DataGrid Classes="Appear" Grid.Row="2" x:Name="RunsGrid"
                   IsVisible="{Binding ShowContent}"
                   ItemsSource="{Binding Runs}"
                   AutoGenerateColumns="False"
@@ -177,14 +223,16 @@
         </DataGrid>
 
         <!-- ══ Detail overlay ═════════════════════════════════════════ -->
-        <Grid Grid.Row="0" Grid.RowSpan="3" IsVisible="{Binding IsDetailOpen}">
+        <Grid Classes="Drawer" Grid.Row="0" Grid.RowSpan="3"
+              behaviors:Drawer.IsOpen="{Binding IsDetailOpen}">
             <!-- Scrim: a flat full-bleed button so clicking outside closes (no code-behind) -->
-            <Button Command="{Binding CloseDetailCommand}"
+            <Button Classes="Scrim" Command="{Binding CloseDetailCommand}"
                     Background="#33000000" BorderThickness="0" CornerRadius="0" Padding="0"
                     HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                     HorizontalContentAlignment="Stretch"/>
 
-            <Border Width="480" HorizontalAlignment="Right" VerticalAlignment="Stretch"
+            <Border Classes="DrawerPanel"
+                    Width="480" HorizontalAlignment="Right" VerticalAlignment="Stretch"
                     Background="White" BorderBrush="#E5E5EA" BorderThickness="1,0,0,0">
                 <DockPanel>
                     <!-- Header -->
@@ -201,9 +249,10 @@
                                 <TextBlock Text="{Binding SelectedRun.FlowName}" FontSize="13"
                                            Foreground="#1C1C1E" TextWrapping="Wrap"/>
                             </StackPanel>
-                            <Button Grid.Column="1" Content="✕" Command="{Binding CloseDetailCommand}"
+                            <Button Grid.Column="1" Classes="IconBtn" Content="✕"
+                                    Command="{Binding CloseDetailCommand}"
                                     FontSize="13" Padding="8,3" VerticalAlignment="Top"
-                                    Background="Transparent" BorderThickness="0"/>
+                                    ToolTip.Tip="Close"/>
                         </Grid>
                     </Border>
 

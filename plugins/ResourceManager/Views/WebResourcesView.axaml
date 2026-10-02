@@ -176,13 +176,13 @@
             <Grid Grid.Column="2" RowDefinitions="Auto,*,Auto" Background="White">
 
                 <!-- Empty state -->
-                <StackPanel Grid.Row="0" Grid.RowSpan="3"
+                <StackPanel Classes="Appear" Grid.Row="0" Grid.RowSpan="3"
                             IsVisible="{Binding IsNothingSelected}"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
                             Spacing="8">
                     <TextBlock Text="Select a resource to edit"
-                               FontSize="16" FontWeight="Light"
+                               FontSize="16" FontWeight="Light" LetterSpacing="-0.3"
                                Foreground="#8E8E93"
                                HorizontalAlignment="Center"/>
                     <TextBlock Text="Use the list on the left to choose a web resource."
@@ -192,7 +192,7 @@
                 </StackPanel>
 
                 <!-- ── Resource header (when something selected) ───── -->
-                <Border Grid.Row="0"
+                <Border Classes="Appear" Grid.Row="0"
                         IsVisible="{Binding IsEditorVisible}"
                         Background="#F8F8FA"
                         BorderBrush="#E5E5EA"
@@ -236,7 +236,7 @@
                 </Border>
 
                 <!-- ── Editor area ───────────────────────────────── -->
-                <Panel Grid.Row="1" IsVisible="{Binding IsEditorVisible}">
+                <Panel Classes="Appear" Grid.Row="1" IsVisible="{Binding IsEditorVisible}">
 
                     <!-- Code editor (AvaloniaEdit + TextMate highlighting) -->
                     <ae:TextEditor x:Name="CodeEditor"
@@ -257,7 +257,7 @@
                                 VerticalAlignment="Center"
                                 Spacing="8">
                         <TextBlock Text="Binary resource"
-                                   FontSize="16" FontWeight="Light"
+                                   FontSize="16" FontWeight="Light" LetterSpacing="-0.3"
                                    Foreground="#8E8E93"
                                    HorizontalAlignment="Center"/>
                         <TextBlock Text="{Binding SelectedResource.TypeLabel}"
@@ -271,7 +271,7 @@
                 </Panel>
 
                 <!-- ── Action bar ────────────────────────────────── -->
-                <Border Grid.Row="2"
+                <Border Classes="Appear" Grid.Row="2"
                         IsVisible="{Binding IsEditorVisible}"
                         Background="#F8F8FA"
                         BorderBrush="#E5E5EA"

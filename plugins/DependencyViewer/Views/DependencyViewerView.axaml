@@ -71,27 +71,27 @@
             <Grid Grid.Column="2" RowDefinitions="Auto,*" Background="White">
 
                 <!-- Empty state -->
-                <StackPanel Grid.Row="0" Grid.RowSpan="2"
+                <StackPanel Classes="Appear" Grid.Row="0" Grid.RowSpan="2"
                             IsVisible="{Binding !IsTableSelected}"
                             HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
-                    <TextBlock Text="Select a table" FontSize="16" FontWeight="Light"
+                    <TextBlock Text="Select a table" FontSize="16" FontWeight="Light" LetterSpacing="-0.3"
                                Foreground="#8E8E93" HorizontalAlignment="Center"/>
                     <TextBlock Text="Pick a table to see what depends on it before you delete it."
                                FontSize="13" Foreground="#AEAEB2" HorizontalAlignment="Center"/>
                 </StackPanel>
 
                 <!-- Header -->
-                <Border Grid.Row="0" IsVisible="{Binding IsTableSelected}"
+                <Border Classes="Appear" Grid.Row="0" IsVisible="{Binding IsTableSelected}"
                         Background="#F8F8FA" BorderBrush="#E5E5EA" BorderThickness="0,0,0,1" Padding="16,10">
                     <StackPanel Spacing="2" VerticalAlignment="Center">
                         <TextBlock Text="{Binding SelectedTable.Title}" FontSize="14"
-                                   FontWeight="SemiBold" Foreground="#1C1C1E"/>
+                                   FontWeight="SemiBold" LetterSpacing="-0.15" Foreground="#1C1C1E"/>
                         <TextBlock Text="{Binding SelectedTable.LogicalName}" FontSize="11"
                                    Foreground="#636366" FontFamily="SF Mono,Menlo,monospace"/>
                     </StackPanel>
                 </Border>
 
-                <DockPanel Grid.Row="1" IsVisible="{Binding IsTableSelected}">
+                <DockPanel Classes="Appear" Grid.Row="1" IsVisible="{Binding IsTableSelected}">
                     <Border DockPanel.Dock="Top" Padding="14,8"
                             Background="#FBFBFD" BorderBrush="#E5E5EA" BorderThickness="0,0,0,1">
                         <TextBlock Text="{Binding DependenciesStatus}" FontSize="11"

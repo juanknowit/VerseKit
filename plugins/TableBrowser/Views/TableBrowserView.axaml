@@ -90,11 +90,11 @@
             <Grid Grid.Column="2" RowDefinitions="Auto,*" Background="White">
 
                 <!-- Empty state -->
-                <StackPanel Grid.Row="0" Grid.RowSpan="2"
+                <StackPanel Classes="Appear" Grid.Row="0" Grid.RowSpan="2"
                             IsVisible="{Binding !IsEntitySelected}"
                             HorizontalAlignment="Center" VerticalAlignment="Center"
                             Spacing="8">
-                    <TextBlock Text="Select a table" FontSize="16" FontWeight="Light"
+                    <TextBlock Text="Select a table" FontSize="16" FontWeight="Light" LetterSpacing="-0.3"
                                Foreground="#8E8E93" HorizontalAlignment="Center"/>
                     <TextBlock Text="Pick a table on the left to see its columns."
                                FontSize="13" Foreground="#AEAEB2"
@@ -102,13 +102,13 @@
                 </StackPanel>
 
                 <!-- Header -->
-                <Border Grid.Row="0" IsVisible="{Binding IsEntitySelected}"
+                <Border Classes="Appear" Grid.Row="0" IsVisible="{Binding IsEntitySelected}"
                         Background="#F8F8FA" BorderBrush="#E5E5EA"
                         BorderThickness="0,0,0,1" Padding="16,10">
                     <Grid ColumnDefinitions="*,Auto,Auto">
                         <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
                             <TextBlock Text="{Binding SelectedEntity.Title}"
-                                       FontSize="14" FontWeight="SemiBold" Foreground="#1C1C1E"/>
+                                       FontSize="14" FontWeight="SemiBold" LetterSpacing="-0.15" Foreground="#1C1C1E"/>
                             <StackPanel Orientation="Horizontal" Spacing="12">
                                 <TextBlock Text="{Binding SelectedEntity.LogicalName}"
                                            FontSize="11" Foreground="#636366"/>
@@ -128,7 +128,7 @@
                 </Border>
 
                 <!-- Column list with a header row -->
-                <DockPanel Grid.Row="1" IsVisible="{Binding IsEntitySelected}">
+                <DockPanel Classes="Appear" Grid.Row="1" IsVisible="{Binding IsEntitySelected}">
                     <Grid DockPanel.Dock="Top" ColumnDefinitions="1.4*,1.6*,110,90,70"
                           Background="#FAFAFB" Margin="0"
                           Height="28">

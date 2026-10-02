@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:VerseKit.App.ViewModels"
         xmlns:core="using:VerseKit.Core.Models"
+        xmlns:behaviors="using:VerseKit.App.Behaviors"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="820"
@@ -14,7 +15,8 @@
         TransparencyLevelHint="AcrylicBlur"
         Background="{DynamicResource WindowBackgroundBrush}"
         ExtendClientAreaToDecorationsHint="True"
-        ExtendClientAreaTitleBarHeightHint="-1">
+        ExtendClientAreaTitleBarHeightHint="-1"
+        Classes.ReduceMotion="{Binding ReduceMotion}">
 
     <Design.DataContext>
         <vm:MainWindowViewModel/>
@@ -51,7 +53,7 @@
                            Opacity="0.4"/>
 
                 <!-- Settings cog — red dot when an update is available -->
-                <Button Classes="IconBtn"
+                <Button Classes="IconBtn SettingsCog"
                         Command="{Binding ToggleSettingsPanelCommand}"
                         ToolTip.Tip="Settings">
                     <Panel>
@@ -334,7 +336,8 @@
                     <!-- Plugin workspace -->
                     <Panel>
                         <!-- Welcome screen -->
-                        <StackPanel IsVisible="{Binding ActivePluginView,
+                        <StackPanel Classes="Appear"
+                                    IsVisible="{Binding ActivePluginView,
                                         Converter={x:Static ObjectConverters.IsNull}}"
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center"
@@ -373,7 +376,8 @@
                         </StackPanel>
 
                         <!-- Active plugin view -->
-                        <ContentControl Content="{Binding ActivePluginView}"
+                        <ContentControl Classes="Workspace"
+                                        Content="{Binding ActivePluginView}"
                                         IsVisible="{Binding ActivePluginView,
                                             Converter={x:Static ObjectConverters.IsNotNull}}"
                                         HorizontalContentAlignment="Stretch"
@@ -382,11 +386,15 @@
                 </Border>
 
                 <!-- ── Connection form overlay ─────────────────────────
-                     Full-area dim + modal card, sits above the white card -->
-                <Panel IsVisible="{Binding IsConnectionPanelVisible}" ZIndex="50">
+                     Modal sheet above the white card. Grows from the
+                     sidebar (top-left), where it was opened. -->
+                <Panel Classes="SheetOverlay"
+                       behaviors:Sheet.IsOpen="{Binding IsConnectionPanelVisible}"
+                       ZIndex="50">
 
                     <!-- Form card — light/white macOS sheet style -->
                     <Border Classes="FormCard"
+                            RenderTransformOrigin="0%,0%"
                             Width="540"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
@@ -399,9 +407,8 @@
                             <!-- Header row -->
                             <DockPanel>
                                 <Button DockPanel.Dock="Right"
+                                        Classes="IconBtn"
                                         Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).ToggleConnectionPanelCommand}"
-                                        Background="Transparent"
-                                        BorderThickness="0"
                                         Padding="6"
                                         ToolTip.Tip="Cancel">
                                     <TextBlock Text="✕" FontSize="14" Foreground="#8E8E93"/>
@@ -409,6 +416,7 @@
                                 <TextBlock Text="{Binding FormTitle}"
                                            FontSize="17"
                                            FontWeight="SemiBold"
+                                           LetterSpacing="-0.4"
                                            Foreground="#1C1C1E"
                                            VerticalAlignment="Center"/>
                             </DockPanel>
@@ -544,9 +552,11 @@
                 </Panel>
 
                 <!-- ── Settings overlay ────────────────────────────────
-                     Dim backdrop + modal sheet, same pattern as the
-                     connection form. -->
-                <Panel IsVisible="{Binding IsSettingsPanelVisible}" ZIndex="60">
+                     Modal sheet. Grows from the Settings cog (top-right,
+                     the FormCard default origin). -->
+                <Panel Classes="SheetOverlay"
+                       behaviors:Sheet.IsOpen="{Binding IsSettingsPanelVisible}"
+                       ZIndex="60">
 
                     <Border Classes="FormCard"
                             Width="420"
@@ -560,6 +570,7 @@
                                            Text="Settings"
                                            FontSize="17"
                                            FontWeight="SemiBold"
+                                           LetterSpacing="-0.4"
                                            Foreground="#1C1C1E"
                                            VerticalAlignment="Center"/>
                                 <Button Grid.Column="1"
@@ -577,6 +588,7 @@
                                         HorizontalAlignment="Center">
                                 <TextBlock Text="VerseKit"
                                            FontSize="16" FontWeight="SemiBold"
+                                           LetterSpacing="-0.3"
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="A macOS toolkit for Microsoft Dataverse administrators."
                                            FontSize="12" Foreground="#6E6E73"
@@ -619,7 +631,8 @@
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="vm:AccentSwatchItem">
-                                            <Button Width="30" Height="30"
+                                            <Button Classes="Swatch"
+                                                    Width="30" Height="30"
                                                     Padding="0"
                                                     CornerRadius="15"
                                                     Background="Transparent"
@@ -630,10 +643,11 @@
                                                     CommandParameter="{Binding Id}">
                                                 <Panel Width="30" Height="30">
                                                     <!-- Ring shown around the active preset -->
-                                                    <Ellipse Width="28" Height="28"
+                                                    <Ellipse Classes="SwatchRing"
+                                                             Classes.selected="{Binding IsSelected}"
+                                                             Width="28" Height="28"
                                                              Stroke="{Binding SwatchBrush}"
-                                                             StrokeThickness="2"
-                                                             IsVisible="{Binding IsSelected}"/>
+                                                             StrokeThickness="2"/>
                                                     <Ellipse Width="20" Height="20"
                                                              Fill="{Binding SwatchBrush}"/>
                                                 </Panel>
@@ -669,6 +683,14 @@
                                                 <Setter Property="FontWeight" Value="Medium"/>
                                                 <Setter Property="Foreground" Value="#3C3C43"/>
                                                 <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                            </Style>
+                                            <!-- Selection capsule eases between states -->
+                                            <Style Selector="Button.seg /template/ ContentPresenter">
+                                                <Setter Property="Transitions">
+                                                    <Transitions>
+                                                        <BrushTransition Property="Background" Duration="0:0:0.15" Easing="CubicEaseOut"/>
+                                                    </Transitions>
+                                                </Setter>
                                             </Style>
                                             <Style Selector="Button.seg:pointerover /template/ ContentPresenter">
                                                 <Setter Property="Background" Value="#0F000000"/>
@@ -734,10 +756,14 @@
                 </Panel>
 
                 <!-- ── Plugins manager overlay ─────────────────────────
-                     Dim-less modal sheet, same pattern as Settings. -->
-                <Panel IsVisible="{Binding IsPluginsPanelVisible}" ZIndex="70">
+                     Dim-less modal sheet, same pattern as Settings. Grows
+                     from the sidebar's TOOLS › Manage button (left). -->
+                <Panel Classes="SheetOverlay"
+                       behaviors:Sheet.IsOpen="{Binding IsPluginsPanelVisible}"
+                       ZIndex="70">
 
                     <Border Classes="FormCard"
+                            RenderTransformOrigin="0%,50%"
                             Width="560" MaxHeight="640"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center">
@@ -747,6 +773,7 @@
                             <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
                                 <TextBlock Grid.Column="0" Text="Plugins"
                                            FontSize="17" FontWeight="SemiBold"
+                                           LetterSpacing="-0.4"
                                            Foreground="#1C1C1E" VerticalAlignment="Center"/>
                                 <Button Grid.Column="1" Classes="IconBtn"
                                         Command="{Binding TogglePluginsPanelCommand}"

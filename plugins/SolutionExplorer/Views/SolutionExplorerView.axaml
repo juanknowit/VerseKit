@@ -89,24 +89,24 @@
             <Grid Grid.Column="2" RowDefinitions="Auto,*" Background="White">
 
                 <!-- Empty state -->
-                <StackPanel Grid.Row="0" Grid.RowSpan="2"
+                <StackPanel Classes="Appear" Grid.Row="0" Grid.RowSpan="2"
                             IsVisible="{Binding !IsSolutionSelected}"
                             HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
-                    <TextBlock Text="Select a solution" FontSize="16" FontWeight="Light"
+                    <TextBlock Text="Select a solution" FontSize="16" FontWeight="Light" LetterSpacing="-0.3"
                                Foreground="#8E8E93" HorizontalAlignment="Center"/>
                     <TextBlock Text="Pick a solution on the left to see its components and export it."
                                FontSize="13" Foreground="#AEAEB2" HorizontalAlignment="Center"/>
                 </StackPanel>
 
                 <!-- Header + export -->
-                <Border Grid.Row="0" IsVisible="{Binding IsSolutionSelected}"
+                <Border Classes="Appear" Grid.Row="0" IsVisible="{Binding IsSolutionSelected}"
                         Background="#F8F8FA" BorderBrush="#E5E5EA"
                         BorderThickness="0,0,0,1" Padding="16,10">
                     <Grid ColumnDefinitions="*,Auto">
                         <StackPanel Grid.Column="0" Spacing="3" VerticalAlignment="Center"
                                     Margin="0,0,12,0">
                             <TextBlock Text="{Binding SelectedSolution.Title}"
-                                       FontSize="14" FontWeight="SemiBold" Foreground="#1C1C1E"
+                                       FontSize="14" FontWeight="SemiBold" LetterSpacing="-0.15" Foreground="#1C1C1E"
                                        TextTrimming="CharacterEllipsis"/>
                             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                 <TextBlock FontSize="11" Foreground="#636366" VerticalAlignment="Center"
@@ -133,7 +133,7 @@
                 </Border>
 
                 <!-- Components -->
-                <DockPanel Grid.Row="1" IsVisible="{Binding IsSolutionSelected}">
+                <DockPanel Classes="Appear" Grid.Row="1" IsVisible="{Binding IsSolutionSelected}">
                     <Border DockPanel.Dock="Top" Padding="14,8"
                             Background="#FBFBFD" BorderBrush="#E5E5EA" BorderThickness="0,0,0,1">
                         <Grid ColumnDefinitions="Auto,Auto,*,Auto">
