@@ -44,6 +44,24 @@ public partial class MainWindow : Window
         ConnectionsTree.AddHandler(PointerPressedEvent, OnTreePointerPressed, RoutingStrategies.Tunnel);
         ConnectionsTree.AddHandler(PointerMovedEvent, OnTreePointerMoved, RoutingStrategies.Tunnel);
         ConnectionsTree.AddHandler(PointerReleasedEvent, OnTreePointerReleased, RoutingStrategies.Tunnel);
+
+        AddHandler(KeyDownEvent, OnWindowKeyDown);
+    }
+
+    // ⌘F focuses the active tool's main filter — the TextBox it marks with
+    // Classes="Search". Focus is a view concern, hence code-behind.
+    private void OnWindowKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.F || e.KeyModifiers != KeyModifiers.Meta) return;
+        if (DataContext is MainWindowViewModel { IsConnectionPanelVisible: false, IsSettingsPanelVisible: false, IsPluginsPanelVisible: false }
+            && Workspace.GetVisualDescendants().OfType<TextBox>()
+                .FirstOrDefault(t => t.Classes.Contains("Search") && t.IsEffectivelyVisible && t.IsEffectivelyEnabled)
+                is { } search)
+        {
+            search.Focus(NavigationMethod.Tab);
+            search.SelectAll();
+            e.Handled = true;
+        }
     }
 
     private void OnTreePointerPressed(object? sender, PointerPressedEventArgs e)

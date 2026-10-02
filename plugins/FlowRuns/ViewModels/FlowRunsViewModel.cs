@@ -63,11 +63,13 @@ public sealed partial class FlowRunsViewModel : ObservableObject
     [ObservableProperty] private DateRangeOption? _selectedDateRange;
     [ObservableProperty] private bool _selectAll;
 
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsDetailOpen))]
-    private FlowRunItem? _selectedRun;
+    [ObservableProperty] private FlowRunItem? _selectedRun;
 
-    public bool IsDetailOpen => SelectedRun is not null;
+    /// <summary>Detail drawer state. Kept separate from SelectedRun so the
+    /// drawer still shows the run while it animates closed.</summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CloseDetailCommand))]
+    private bool _isDetailOpen;
     public bool HasResults => RunCount > 0;
     public bool ShowConnectPrompt => !IsConnected;
     public bool ShowNotEnabled => IsConnected && !IsFeatureEnabled;
@@ -92,7 +94,7 @@ public sealed partial class FlowRunsViewModel : ObservableObject
                     _allRuns = [];
                     Runs.Clear();
                     Flows.Clear();
-                    SelectedRun = null;
+                    IsDetailOpen = false;
                     SelectAll = false;
                     RunCount = 0;
                     Summary = "";
@@ -326,15 +328,18 @@ public sealed partial class FlowRunsViewModel : ObservableObject
     [RelayCommand]
     private void Inspect(FlowRunItem? run)
     {
-        if (run is not null) SelectedRun = run;
+        if (run is null) return;
+        SelectedRun = run;
+        IsDetailOpen = true;
     }
 
-    [RelayCommand]
-    private void CloseDetail() => SelectedRun = null;
+    // CanExecute lets Esc fall through to the host when the drawer is closed.
+    [RelayCommand(CanExecute = nameof(IsDetailOpen))]
+    private void CloseDetail() => IsDetailOpen = false;
 
     private void ApplyStatusFilter()
     {
-        SelectedRun = null;
+        IsDetailOpen = false;
         var status = SelectedStatus;
         var filtered = status == "All statuses"
             ? _allRuns

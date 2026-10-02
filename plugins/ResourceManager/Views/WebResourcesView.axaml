@@ -65,7 +65,7 @@
                 Padding="12,7">
             <Grid ColumnDefinitions="*,Auto">
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
-                    <TextBox PlaceholderText="Filter by name…"
+                    <TextBox Classes="Search" PlaceholderText="Filter by name…"
                              Text="{Binding FilterText}"
                              Width="240"/>
                     <Button Content="Load 5,000 more"

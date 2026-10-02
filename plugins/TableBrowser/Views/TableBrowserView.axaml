@@ -18,7 +18,7 @@
                            FontWeight="SemiBold" FontSize="13"
                            Foreground="#1C1C1E" VerticalAlignment="Center"
                            Margin="0,0,12,0"/>
-                <TextBox Grid.Column="1"
+                <TextBox Classes="Search" Grid.Column="1"
                          PlaceholderText="Filter tables by name…"
                          Text="{Binding FilterText}"
                          HorizontalAlignment="Left" Width="280"/>

@@ -22,6 +22,12 @@
         <vm:MainWindowViewModel/>
     </Design.DataContext>
 
+    <!-- Esc closes the frontmost sheet. (⌘F → the active tool's search
+         field is handled in code-behind: it needs the visual tree.) -->
+    <Window.KeyBindings>
+        <KeyBinding Gesture="Escape" Command="{Binding CloseTopSheetCommand}"/>
+    </Window.KeyBindings>
+
     <Grid RowDefinitions="52,*">
 
         <!-- ══ Title bar row ══════════════════════════════════════════
@@ -376,7 +382,8 @@
                         </StackPanel>
 
                         <!-- Active plugin view -->
-                        <ContentControl Classes="Workspace"
+                        <ContentControl x:Name="Workspace"
+                                        Classes="Workspace"
                                         Content="{Binding ActivePluginView}"
                                         IsVisible="{Binding ActivePluginView,
                                             Converter={x:Static ObjectConverters.IsNotNull}}"

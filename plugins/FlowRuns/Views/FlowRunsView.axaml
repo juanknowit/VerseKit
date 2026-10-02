@@ -7,6 +7,10 @@
              x:Name="Root"
              x:DataType="vm:FlowRunsViewModel">
 
+    <UserControl.KeyBindings>
+        <KeyBinding Gesture="Escape" Command="{Binding CloseDetailCommand}"/>
+    </UserControl.KeyBindings>
+
     <UserControl.Styles>
         <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
         <!-- Selectable/copyable read-only text. SelectableTextBlock crashes the

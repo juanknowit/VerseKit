@@ -17,7 +17,7 @@
                                FontWeight="SemiBold" FontSize="13"
                                Foreground="#1C1C1E" VerticalAlignment="Center"/>
                 </StackPanel>
-                <TextBox Grid.Column="1"
+                <TextBox Classes="Search" Grid.Column="1"
                          PlaceholderText="Filter solutions…"
                          Text="{Binding FilterText}"
                          HorizontalAlignment="Left" Width="280"/>

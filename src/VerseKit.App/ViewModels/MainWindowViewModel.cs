@@ -68,7 +68,9 @@ public partial class MainWindowViewModel : ViewModelBase
     // Connection
     [ObservableProperty] private string _connectionStatus = "Not connected";
     [ObservableProperty] private PluginEntry? _selectedPlugin;
-    [ObservableProperty] private bool _isConnectionPanelVisible;
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CloseTopSheetCommand))]
+    private bool _isConnectionPanelVisible;
     [ObservableProperty] private bool _isConnected;
 
     // Workspace
@@ -76,7 +78,9 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private string? _activationError;
 
     // Settings & updates
-    [ObservableProperty] private bool _isSettingsPanelVisible;
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CloseTopSheetCommand))]
+    private bool _isSettingsPanelVisible;
 
     /// <summary>macOS "Reduce motion" — styles swap movement for cross-fades.</summary>
     public bool ReduceMotion { get; } = MacAccessibility.ShouldReduceMotion();
@@ -108,7 +112,9 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>All discovered plugins (enabled + disabled) for the manager sheet.</summary>
     public ObservableCollection<PluginItemViewModel> PluginItems { get; } = [];
 
-    [ObservableProperty] private bool _isPluginsPanelVisible;
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CloseTopSheetCommand))]
+    private bool _isPluginsPanelVisible;
     [ObservableProperty] private string? _pluginStatus;
 
     /// <summary>Set by the view to pick a folder to install (TopLevel.StorageProvider).</summary>
@@ -695,6 +701,19 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [RelayCommand]
     private void ToggleSettingsPanel() => IsSettingsPanelVisible = !IsSettingsPanelVisible;
+
+    private bool IsAnySheetOpen => IsPluginsPanelVisible || IsSettingsPanelVisible || IsConnectionPanelVisible;
+
+    /// <summary>Esc: close the frontmost sheet (Plugins over Settings over
+    /// Connection, matching their ZIndex). Disabled when none is open so Esc
+    /// is left for whatever else wants it.</summary>
+    [RelayCommand(CanExecute = nameof(IsAnySheetOpen))]
+    private void CloseTopSheet()
+    {
+        if (IsPluginsPanelVisible) IsPluginsPanelVisible = false;
+        else if (IsSettingsPanelVisible) IsSettingsPanelVisible = false;
+        else IsConnectionPanelVisible = false;
+    }
 
     [RelayCommand]
     private void OpenGitHub() =>
