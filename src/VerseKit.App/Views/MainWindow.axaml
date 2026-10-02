@@ -817,9 +817,12 @@
                                            Foreground="#3C3C43" TextWrapping="Wrap"/>
                             </Border>
 
-                            <!-- Installed + available, scrolled together -->
-                            <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-                                <StackPanel Spacing="8">
+                            <!-- Installed + available, scrolled together. The scroll area
+                                 reaches 20px into the sheet's right padding and the content
+                                 is inset by the same amount, so the (overlay) scrollbar runs
+                                 in that gutter instead of over the cards and switches. -->
+                            <ScrollViewer HorizontalScrollBarVisibility="Disabled" Margin="0,0,-20,0">
+                                <StackPanel Spacing="8" Margin="0,0,20,0">
 
                                     <DockPanel Margin="2,0,0,2">
                                         <TextBlock DockPanel.Dock="Right" Text="Turn a tool off to uninstall it"
