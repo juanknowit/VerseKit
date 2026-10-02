@@ -18,6 +18,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\VerseKit.App\VerseKit.App.csproj" />
     <ProjectReference Include="..\..\src\VerseKit.PluginSdk\VerseKit.PluginSdk.csproj" />
+    <ProjectReference Include="..\..\plugins\ResourceManager\ResourceManager.csproj" />
   </ItemGroup>
 
 </Project>
