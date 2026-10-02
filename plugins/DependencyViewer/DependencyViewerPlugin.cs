@@ -14,8 +14,8 @@ public sealed class DependencyViewerPlugin : IVerseKitPlugin
     // GUID chosen so the icon-colour hash lands on an unused palette slot (pink).
     public Guid PluginId => new("a7b8c9d0-e1f2-3456-abcd-789012345671");
     public string Name => "Dependency Viewer";
-    public string Description => "See what depends on a table before deleting it — read only";
-    public string Version => "1.0.1";
+    public string Description => "See what depends on a table or column before deleting it — read only";
+    public string Version => "1.1.0";
 
     private IConnectionProvider? _connectionProvider;
 
