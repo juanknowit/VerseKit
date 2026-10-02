@@ -209,11 +209,34 @@
             <Setter Property="Foreground" Value="{StaticResource DangerTextBrush}"/>
         </Style>
 
-        <!-- ── Destructive menu item (e.g. "Remove…" in a ⋯ menu) ──
-             macOS style: red text in the menu; the confirmation that follows
-             carries the destructive emphasis. Stays red when highlighted. -->
-        <Style Selector="MenuItem.Destructive /template/ ContentPresenter#PART_HeaderPresenter, MenuItem.Destructive:selected /template/ ContentPresenter#PART_HeaderPresenter">
-            <Setter Property="Foreground" Value="{StaticResource DangerTextBrush}"/>
+        <!-- ── Switch (ToggleSwitch) — macOS style ─────────────────
+             Fluent draws a Windows switch: an outlined track with a small
+             10px knob (black when off). macOS: no outline, light-grey track
+             when off, accent track when on, and a white knob that nearly
+             fills the height. -->
+        <!-- (State selectors on purpose: the knob/track values are set inside the
+             Fluent template, which outranks plain styles — only :checked /
+             :unchecked rules, i.e. style triggers, can override them.) -->
+        <Style Selector="ToggleSwitch:unchecked /template/ Border#OuterBorder, ToggleSwitch:checked /template/ Border#OuterBorder">
+            <Setter Property="Background" Value="#E5E5EA"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+        <Style Selector="ToggleSwitch:unchecked:pointerover /template/ Border#OuterBorder">
+            <Setter Property="Background" Value="#DADADF"/>
+        </Style>
+        <Style Selector="ToggleSwitch:unchecked /template/ Border#SwitchKnobBounds, ToggleSwitch:checked /template/ Border#SwitchKnobBounds">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+        <Style Selector="ToggleSwitch:checked:pointerover /template/ Border#SwitchKnobBounds">
+            <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
+        </Style>
+        <Style Selector="ToggleSwitch:unchecked /template/ Ellipse#SwitchKnobOff, ToggleSwitch:checked /template/ Ellipse#SwitchKnobOff, ToggleSwitch:unchecked /template/ Ellipse#SwitchKnobOn, ToggleSwitch:checked /template/ Ellipse#SwitchKnobOn">
+            <Setter Property="Width" Value="16"/>
+            <Setter Property="Height" Value="16"/>
+            <Setter Property="Fill" Value="White"/>
+            <Setter Property="Stroke" Value="#1F000000"/>
+            <Setter Property="StrokeThickness" Value="0.5"/>
         </Style>
 
         <!-- Primary / Success now share the white floating-pill look

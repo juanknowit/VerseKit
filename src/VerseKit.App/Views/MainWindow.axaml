@@ -821,8 +821,12 @@
                             <ScrollViewer HorizontalScrollBarVisibility="Disabled">
                                 <StackPanel Spacing="8">
 
-                                    <TextBlock Text="INSTALLED" FontSize="11" FontWeight="SemiBold"
-                                               Foreground="#6E6E73" LetterSpacing="0.6" Margin="2,0,0,2"/>
+                                    <DockPanel Margin="2,0,0,2">
+                                        <TextBlock DockPanel.Dock="Right" Text="Turn a tool off to uninstall it"
+                                                   FontSize="11" Foreground="#AEAEB2" VerticalAlignment="Center"/>
+                                        <TextBlock Text="INSTALLED" FontSize="11" FontWeight="SemiBold"
+                                                   Foreground="#6E6E73" LetterSpacing="0.6"/>
+                                    </DockPanel>
 
                                     <ItemsControl ItemsSource="{Binding PluginItems}">
                                     <ItemsControl.ItemTemplate>
@@ -842,33 +846,24 @@
                                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                     </Border>
 
-                                                    <!-- ⋯ actions (macOS style: no red in the list;
-                                                         "Remove…" is red in the menu, and the
-                                                         confirmation dialog carries the emphasis) -->
-                                                    <Button DockPanel.Dock="Right" Classes="IconBtn"
-                                                            Content="⋯" FontSize="15" Padding="7,0,7,2"
-                                                            Margin="6,0,0,0" VerticalAlignment="Center"
-                                                            ToolTip.Tip="More actions">
-                                                        <Button.Flyout>
-                                                            <MenuFlyout Placement="BottomEdgeAlignedRight">
-                                                                <MenuItem Header="Show in Finder"
-                                                                          Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).ShowPluginInFinderCommand}"
-                                                                          CommandParameter="{Binding}"/>
-                                                                <Separator IsVisible="{Binding IsRemovable}"/>
-                                                                <MenuItem Header="Remove…" Classes="Destructive"
-                                                                          IsVisible="{Binding IsRemovable}"
-                                                                          Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).RemovePluginCommand}"
-                                                                          CommandParameter="{Binding}"/>
-                                                            </MenuFlyout>
-                                                        </Button.Flyout>
-                                                    </Button>
-
-                                                    <!-- Enable toggle (left of the ⋯) -->
+                                                    <!-- Install switch (far right): off = uninstall;
+                                                         the tool then moves to Available. -->
                                                     <ToggleSwitch DockPanel.Dock="Right"
                                                                   OnContent="" OffContent=""
                                                                   MinWidth="0"
                                                                   VerticalAlignment="Center"
-                                                                  IsChecked="{Binding IsEnabled, Mode=TwoWay}"/>
+                                                                  IsChecked="{Binding IsOn, Mode=TwoWay}"
+                                                                  IsEnabled="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).CanChangePlugins}"
+                                                                  ToolTip.Tip="Turn off to uninstall"/>
+
+                                                    <!-- Newer version in the registry -->
+                                                    <Button DockPanel.Dock="Right"
+                                                            Content="{Binding UpdateLabel}"
+                                                            IsVisible="{Binding HasUpdate}"
+                                                            Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).UpdatePluginCommand}"
+                                                            CommandParameter="{Binding}"
+                                                            FontSize="12" Padding="10,4" Margin="0,0,10,0"
+                                                            VerticalAlignment="Center"/>
 
 
                                                     <!-- Name / version / origin / description -->
@@ -900,8 +895,12 @@
                                     </ItemsControl.ItemTemplate>
                                     </ItemsControl>
 
-                                    <TextBlock Text="AVAILABLE" FontSize="11" FontWeight="SemiBold"
-                                               Foreground="#6E6E73" LetterSpacing="0.6" Margin="2,8,0,2"/>
+                                    <DockPanel Margin="2,8,0,2">
+                                        <TextBlock DockPanel.Dock="Right" Text="Turn a tool on to install it"
+                                                   FontSize="11" Foreground="#AEAEB2" VerticalAlignment="Center"/>
+                                        <TextBlock Text="AVAILABLE" FontSize="11" FontWeight="SemiBold"
+                                                   Foreground="#6E6E73" LetterSpacing="0.6"/>
+                                    </DockPanel>
 
                                     <TextBlock Text="Loading…" FontSize="12" Foreground="#8E8E93" Margin="2,0,0,0"
                                                IsVisible="{Binding IsCatalogLoading}"/>
@@ -927,13 +926,23 @@
                                                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                         </Border>
 
-                                                        <!-- Install / Update / Installed -->
-                                                        <Button DockPanel.Dock="Right" Classes="Primary"
-                                                                Content="{Binding ActionLabel}"
-                                                                MinWidth="86" VerticalAlignment="Center"
-                                                                IsEnabled="{Binding CanInstall}"
-                                                                Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).InstallFromCatalogCommand}"
-                                                                CommandParameter="{Binding}"/>
+                                                        <!-- Install switch: on = install (downloaded from
+                                                             the GitHub release, or restored if built-in) -->
+                                                        <ToggleSwitch DockPanel.Dock="Right"
+                                                                      OnContent="" OffContent=""
+                                                                      MinWidth="0"
+                                                                      VerticalAlignment="Center"
+                                                                      IsChecked="{Binding IsOn, Mode=TwoWay}"
+                                                                      IsEnabled="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).CanChangePlugins}"
+                                                                      ToolTip.Tip="Turn on to install"/>
+                                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6"
+                                                                    Margin="0,0,10,0" VerticalAlignment="Center"
+                                                                    IsVisible="{Binding IsBusy}">
+                                                            <ProgressBar IsIndeterminate="True" Width="40" MinWidth="0" Height="3"
+                                                                         VerticalAlignment="Center"/>
+                                                            <TextBlock Text="Installing…" FontSize="11" Foreground="#8E8E93"
+                                                                       VerticalAlignment="Center"/>
+                                                        </StackPanel>
 
                                                         <!-- Name / version / author / description -->
                                                         <StackPanel VerticalAlignment="Center" Spacing="2">
@@ -950,6 +959,10 @@
                                                                            Foreground="#8E8E93" VerticalAlignment="Center"/>
                                                                 <TextBlock Text="{Binding Author}" FontSize="10.5"
                                                                            Foreground="#AEAEB2" VerticalAlignment="Center"/>
+                                                                <Border Background="#EEEEF2" CornerRadius="6" Padding="6,1"
+                                                                        VerticalAlignment="Center" IsVisible="{Binding IsBuiltIn}">
+                                                                    <TextBlock Text="Bundled" FontSize="10" Foreground="#6E6E73"/>
+                                                                </Border>
                                                             </StackPanel>
                                                             <TextBlock Text="{Binding Description}" FontSize="11.5"
                                                                        Foreground="#8E8E93"

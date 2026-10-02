@@ -1,19 +1,16 @@
 using System.Linq;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
+using VerseKit.App.Services;
 using VerseKit.Core.Models;
 
 namespace VerseKit.App.ViewModels;
 
-/// <summary>A row in the Plugins manager: wraps a <see cref="PluginEntry"/> with
-/// live enabled state and presentation helpers.</summary>
+/// <summary>An installed row in the Plugins manager. Its switch is the install
+/// state: turning it off uninstalls the tool (it moves to Available).</summary>
 public sealed partial class PluginItemViewModel : ObservableObject
 {
-    public PluginItemViewModel(PluginEntry entry, bool isEnabled)
-    {
-        Entry = entry;
-        _isEnabled = isEnabled;
-    }
+    public PluginItemViewModel(PluginEntry entry) => Entry = entry;
 
     public PluginEntry Entry { get; }
 
@@ -21,7 +18,6 @@ public sealed partial class PluginItemViewModel : ObservableObject
     public string Version => $"v{Entry.Plugin.Version}";
     public string Description => Entry.Plugin.Description;
     public bool IsBundled => Entry.Origin == PluginOrigin.Bundled;
-    public bool IsRemovable => Entry.Origin == PluginOrigin.User;
     public string OriginLabel => IsBundled ? "Bundled" : "Installed";
     public IBrush IconBrush => PluginColor.For(Entry.Plugin.PluginId.ToString());
 
@@ -36,15 +32,27 @@ public sealed partial class PluginItemViewModel : ObservableObject
         }
     }
 
-    /// <summary>Invoked when the user flips the toggle (parent persists + refilters).</summary>
-    public System.Action<PluginItemViewModel>? EnabledChanged { get; set; }
+    /// <summary>Invoked when the user switches the tool off (parent uninstalls it).</summary>
+    public System.Action<PluginItemViewModel>? TurnedOff { get; set; }
 
+    /// <summary>Installed rows start on; switching off requests an uninstall.</summary>
     [ObservableProperty]
-    private bool _isEnabled;
+    private bool _isOn = true;
+
+    partial void OnIsOnChanged(bool value)
+    {
+        if (!value) TurnedOff?.Invoke(this);
+    }
+
+    /// <summary>A newer registry version of this tool, if any (set by the host).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasUpdate), nameof(UpdateLabel))]
+    private PluginRegistryEntry? _updateEntry;
+
+    public bool HasUpdate => UpdateEntry is not null;
+    public string UpdateLabel => UpdateEntry is { } u ? $"Update to v{u.Version}" : "";
 
     /// <summary>True if the registry marks this plugin as beta (set by the host).</summary>
     [ObservableProperty]
     private bool _isBeta;
-
-    partial void OnIsEnabledChanged(bool value) => EnabledChanged?.Invoke(this);
 }

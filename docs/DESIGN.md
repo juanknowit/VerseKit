@@ -113,11 +113,10 @@ appear/intensify on hover or focus. No drop shadows (see §8).
 Rules:
 - **At most one `Primary`/`Success` per button group.** Everything else is default white.
 - **Red is exclusively destructive.** Never use `Danger` for a normal action.
-- **No red buttons inside lists.** Per-row actions live in a quiet `IconBtn` "⋯"
-  with a `MenuFlyout`; destructive entries there use `MenuItem.Destructive` (red
-  text, e.g. "Remove…") and always lead to a confirmation, whose confirm button
-  carries the red. Reserve `Danger` pills for a sheet's own destructive action
-  (e.g. Delete in the Connection sheet).
+- **No red buttons inside lists.** Reversible per-row state is a switch (see the
+  Plugins manager below), not a red button. Reserve `Danger` pills for a sheet's
+  own destructive action (e.g. Delete in the Connection sheet), and confirm
+  destructive actions that can't easily be undone.
 - **A button keeps its text colour on hover/press** (App.axaml overrides Fluent,
   which otherwise forces near-black onto the content — see §8).
 - Button text is always `TextPrimaryBrush` except `Danger` (red). No white-on-color.
@@ -176,6 +175,16 @@ and rejected. Focus is indicated by the caret and selection only — keep it qui
   older hosts) — copy them from Flow Runs for a new grid. Per-row actions are
   quiet `IconBtn` links that take the accent on row hover/selection, and
   double-clicking a row opens it.
+- **Switches** (`ToggleSwitch`): macOS style from `App.axaml` — no outline,
+  `#E5E5EA` track when off, accent track when on, 16px white knob.
+- **Plugins manager** (Tools › Manage): a tool's switch *is* its install state.
+  Installed rows are on; turning one off uninstalls it immediately (no
+  confirmation — it's reversible): user-installed copies are deleted, and a
+  bundled tool, whose files ship inside the app, is recorded as switched off in
+  `~/.config/versekit/plugins.json`. Available rows are off; turning one on
+  installs it from its GitHub release (or restores the bundled copy, downloading
+  only if the registry has a newer version). A newer registry version shows as an
+  "Update to vX" button on the installed row. Switches lock while a change runs.
 - **Sidebar list** (`ListBox.SidebarList`): selection is a pale accent tint
   (`{DynamicResource TintBrush}`, derived from the chosen accent) with dark text,
   Finder-style — not a saturated fill.
@@ -339,7 +348,12 @@ These cost real iteration. Respect them:
     buttons flipped to black. `App.axaml` binds the presenter's Foreground back
     to the button's in those states; style a button's text colour via its
     `Foreground`, not via descendant `TextBlock` selectors.
-12. **A full-bleed `Button` used as a scrim** inherits the grey hover/press pill
+12. **Values set inside a control template outrank plain styles.** To override
+    a Fluent template part (e.g. the ToggleSwitch knob size/fill), use a state
+    selector (`:checked`/`:unchecked`, `:pointerover`) — those are style
+    triggers, which beat template values; a stateless `/template/` rule may
+    silently do nothing.
+13. **A full-bleed `Button` used as a scrim** inherits the grey hover/press pill
     fill. Give it the `Scrim` class and pin its hover/pressed background.
 
 ---
