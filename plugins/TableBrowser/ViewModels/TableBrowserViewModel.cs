@@ -54,20 +54,9 @@ public sealed partial class TableBrowserViewModel : ObservableObject
             }));
     }
 
-    private CancellationTokenSource? _filterDebounce;
-
-    partial void OnFilterTextChanged(string value)
-    {
-        _filterDebounce?.Cancel();
-        var cts = _filterDebounce = new CancellationTokenSource();
-        _ = DebouncedFilterAsync(cts.Token);
-    }
-
-    private async Task DebouncedFilterAsync(CancellationToken ct)
-    {
-        try { await Task.Delay(200, ct); ApplyFilter(); }
-        catch (OperationCanceledException) { }
-    }
+    // Filter on every keystroke — local and cheap, and instant feedback
+    // matters more than saving work (DESIGN.md §7, "respond immediately").
+    partial void OnFilterTextChanged(string value) => ApplyFilter();
 
     private void ApplyFilter()
     {
