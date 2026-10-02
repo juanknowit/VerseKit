@@ -10,6 +10,8 @@ public sealed partial class FlowRunItem : ObservableObject
     [ObservableProperty] private bool _isSelected;
 
     public required string FlowName { get; init; }
+    /// <summary>The run's cloud flow (workflow row id), for the Power Automate link.</summary>
+    public Guid? WorkflowId { get; init; }
     public required string Status { get; init; }
     public string Owner { get; init; } = "";
     public string RunId { get; init; } = "";
