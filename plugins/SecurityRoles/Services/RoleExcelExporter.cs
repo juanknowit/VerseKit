@@ -75,6 +75,44 @@ public static class RoleExcelExporter
         wb.SaveAs(path);
     }
 
+    public static void ExportComparison(string path, RoleItem roleA, RoleItem roleB,
+                                        IReadOnlyList<RoleComparisonRow> rows)
+    {
+        using var wb = new XLWorkbook();
+        var ws = wb.AddWorksheet("Role comparison");
+
+        string[] headers = ["Table", "Logical Name", "Privilege", roleA.Title, roleB.Title, "Differs"];
+
+        WriteTitle(ws, roleA, $"Compared with {roleB.Title} ({roleB.BusinessUnit}) — {rows.Count} privilege(s)",
+                   lastColumn: headers.Length);
+
+        const int headerRow = 3;
+        for (var c = 0; c < headers.Length; c++)
+            ws.Cell(headerRow, c + 1).Value = headers[c];
+        StyleHeader(ws.Range(headerRow, 1, headerRow, headers.Length));
+
+        var r = headerRow + 1;
+        foreach (var row in rows)
+        {
+            ws.Cell(r, 1).Value = row.Title;
+            ws.Cell(r, 2).Value = row.LogicalName;
+            ws.Cell(r, 3).Value = row.Privilege;
+            WriteAccess(ws, r, 4, row.CellA);
+            WriteAccess(ws, r, 5, row.CellB);
+            ws.Cell(r, 6).Value = row.Differs ? "Yes" : "";
+            r++;
+        }
+
+        ws.SheetView.FreezeRows(headerRow);
+        ws.Column(1).Width = 30;
+        ws.Column(2).Width = 28;
+        ws.Column(3).Width = 13;
+        ws.Column(4).Width = 22;
+        ws.Column(5).Width = 22;
+        ws.Column(6).Width = 9;
+        wb.SaveAs(path);
+    }
+
     private static void WriteTitle(IXLWorksheet ws, RoleItem role, string subtitle, int lastColumn)
     {
         ws.Cell(1, 1).Value = role.Title;

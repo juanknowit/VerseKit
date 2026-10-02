@@ -98,6 +98,20 @@
             <Setter Property="BorderBrush" Value="{StaticResource PillEdgeBrush}"/>
         </Style>
 
+        <!-- ══ AutoCompleteBox — white pill, matches TextBox ═══════
+             Its inner TextBox takes border/corner/padding from these via
+             TemplateBinding (which outranks the TextBox style above), so the
+             pill look has to be set here or it renders as a square box. -->
+        <Style Selector="AutoCompleteBox">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{StaticResource PillEdgeBrush}"/>
+            <Setter Property="CornerRadius" Value="18"/>
+            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="MinHeight" Value="36"/>
+        </Style>
+
         <!-- ══ ComboBox — filled field, matches TextBox ═══════════ -->
         <Style Selector="ComboBox">
             <Setter Property="Background" Value="White"/>
