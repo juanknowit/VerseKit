@@ -107,7 +107,7 @@
                             Spacing="8">
                     <TextBlock Text="Select a table" FontSize="16" FontWeight="Light" LetterSpacing="-0.3"
                                Foreground="#8E8E93" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Pick a table on the left to see its columns."
+                    <TextBlock Text="Pick a table on the left to see its columns, relationships and keys."
                                FontSize="13" Foreground="#AEAEB2"
                                HorizontalAlignment="Center"/>
                 </StackPanel>
@@ -116,7 +116,7 @@
                 <Border Classes="Appear" Grid.Row="0" IsVisible="{Binding IsEntitySelected}"
                         Background="#F8F8FA" BorderBrush="#E5E5EA"
                         BorderThickness="0,0,0,1" Padding="16,10">
-                    <Grid ColumnDefinitions="*,Auto,Auto">
+                    <Grid ColumnDefinitions="*,Auto,Auto,Auto">
                         <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
                             <TextBlock Text="{Binding SelectedEntity.Title}"
                                        FontSize="14" FontWeight="SemiBold" LetterSpacing="-0.15" Foreground="#1C1C1E"/>
@@ -132,14 +132,26 @@
                                      Width="60" Height="3" VerticalAlignment="Center"
                                      Margin="0,0,10,0"/>
                         <TextBox Grid.Column="2"
-                                 PlaceholderText="Filter columns…"
+                                 PlaceholderText="Filter…"
                                  Text="{Binding AttributeFilterText}"
                                  Width="220" VerticalAlignment="Center"/>
+                        <Button Grid.Column="3" Content="Export CSV"
+                                Command="{Binding ExportCsvCommand}"
+                                ToolTip.Tip="Export the current tab to CSV"
+                                FontSize="12" Padding="10,5" Margin="8,0,0,0"
+                                VerticalAlignment="Center"/>
                     </Grid>
                 </Border>
 
-                <!-- Column list with a header row -->
-                <DockPanel Classes="Appear" Grid.Row="1" IsVisible="{Binding IsEntitySelected}">
+                <!-- Tabs: Columns | Relationships | Keys -->
+                <TabControl Classes="Appear" Grid.Row="1" IsVisible="{Binding IsEntitySelected}"
+                            SelectedIndex="{Binding DetailTabIndex}"
+                            Padding="0" Margin="0">
+                <TabItem>
+                <TabItem.Header>
+                    <TextBlock Text="{Binding Attributes.Count, StringFormat='Columns ({0})'}" FontSize="13"/>
+                </TabItem.Header>
+                <DockPanel>
                     <Grid DockPanel.Dock="Top" ColumnDefinitions="1.4*,1.6*,110,90,70"
                           Background="#FAFAFB" Margin="0"
                           Height="28">
@@ -218,6 +230,153 @@
                         </ListBox.Styles>
                     </ListBox>
                 </DockPanel>
+                </TabItem>
+
+                <!-- ══ Relationships ═════════════════════════════ -->
+                <TabItem>
+                <TabItem.Header>
+                    <TextBlock Text="{Binding Relationships.Count, StringFormat='Relationships ({0})'}" FontSize="13"/>
+                </TabItem.Header>
+                <DockPanel>
+                    <Grid DockPanel.Dock="Top" ColumnDefinitions="1.6*,60,1.2*,1.4*,70"
+                          Background="#FAFAFB" Height="28">
+                        <TextBlock Grid.Column="0" Text="SCHEMA NAME" Margin="14,0,0,0" FontSize="10"
+                                   FontWeight="SemiBold" Foreground="#8E8E93" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="1" Text="TYPE" FontSize="10"
+                                   FontWeight="SemiBold" Foreground="#8E8E93" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="2" Text="RELATED TABLE" FontSize="10"
+                                   FontWeight="SemiBold" Foreground="#8E8E93" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="3" Text="VIA" FontSize="10"
+                                   FontWeight="SemiBold" Foreground="#8E8E93" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="4" Text="FLAG" FontSize="10"
+                                   FontWeight="SemiBold" Foreground="#8E8E93" VerticalAlignment="Center"/>
+                    </Grid>
+                    <ListBox ItemsSource="{Binding Relationships}"
+                             Background="Transparent" BorderThickness="0" Padding="0"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="models:RelationshipItem">
+                                <Grid ColumnDefinitions="1.6*,60,1.2*,1.4*,70" Height="34" Background="Transparent">
+                                    <Grid.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="Copy Schema Name" Command="{x:Static local:CopyCommand.Instance}" CommandParameter="{Binding SchemaName}"/>
+                                            <MenuItem Header="Copy Related Table" Command="{x:Static local:CopyCommand.Instance}" CommandParameter="{Binding RelatedTable}"/>
+                                            <MenuItem Header="Copy Via" Command="{x:Static local:CopyCommand.Instance}" CommandParameter="{Binding Via}"/>
+                                        </ContextMenu>
+                                    </Grid.ContextMenu>
+                                    <TextBlock Grid.Column="0" Text="{Binding SchemaName}"
+                                               FontSize="12" Foreground="#1C1C1E" FontFamily="SF Mono,Menlo,monospace"
+                                               VerticalAlignment="Center" ClipToBounds="True"
+                                               TextTrimming="CharacterEllipsis" Margin="14,0,6,0"/>
+                                    <Border Grid.Column="1" Background="{Binding KindColor}"
+                                            CornerRadius="4" Padding="5,1" HorizontalAlignment="Left"
+                                            VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Kind}" FontSize="9" FontWeight="Bold" Foreground="White"/>
+                                    </Border>
+                                    <TextBlock Grid.Column="2" Text="{Binding RelatedTable}"
+                                               FontSize="12" Foreground="#3C3C43" FontFamily="SF Mono,Menlo,monospace"
+                                               VerticalAlignment="Center" ClipToBounds="True"
+                                               TextTrimming="CharacterEllipsis" Margin="0,0,6,0"/>
+                                    <TextBlock Grid.Column="3" Text="{Binding Via}"
+                                               FontSize="12" Foreground="#636366" FontFamily="SF Mono,Menlo,monospace"
+                                               VerticalAlignment="Center" ClipToBounds="True"
+                                               TextTrimming="CharacterEllipsis" Margin="0,0,6,0"/>
+                                    <Border Grid.Column="4" Background="#AF52DE"
+                                            CornerRadius="4" Padding="5,1" HorizontalAlignment="Left"
+                                            VerticalAlignment="Center" IsVisible="{Binding IsCustom}">
+                                        <TextBlock Text="CUSTOM" FontSize="8" FontWeight="Bold" Foreground="White"/>
+                                    </Border>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                        <ListBox.Styles>
+                            <Style Selector="ListBoxItem">
+                                <Setter Property="Padding" Value="0"/>
+                            </Style>
+                            <Style Selector="ListBoxItem:nth-child(2n) /template/ ContentPresenter">
+                                <Setter Property="Background" Value="#FAFAFB"/>
+                            </Style>
+                            <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
+                                <Setter Property="Background" Value="#0F000000"/>
+                            </Style>
+                            <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+                                <Setter Property="Background" Value="{DynamicResource TintBrush}"/>
+                            </Style>
+                        </ListBox.Styles>
+                    </ListBox>
+                </DockPanel>
+                </TabItem>
+
+                <!-- ══ Alternate keys ════════════════════════════ -->
+                <TabItem>
+                <TabItem.Header>
+                    <TextBlock Text="{Binding Keys.Count, StringFormat='Keys ({0})'}" FontSize="13"/>
+                </TabItem.Header>
+                <DockPanel>
+                    <Grid DockPanel.Dock="Top" ColumnDefinitions="1.4*,1.4*,2*,90"
+                          Background="#FAFAFB" Height="28">
+                        <TextBlock Grid.Column="0" Text="DISPLAY NAME" Margin="14,0,0,0" FontSize="10"
+                                   FontWeight="SemiBold" Foreground="#8E8E93" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="1" Text="LOGICAL NAME" FontSize="10"
+                                   FontWeight="SemiBold" Foreground="#8E8E93" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="2" Text="COLUMNS" FontSize="10"
+                                   FontWeight="SemiBold" Foreground="#8E8E93" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="3" Text="STATUS" FontSize="10"
+                                   FontWeight="SemiBold" Foreground="#8E8E93" VerticalAlignment="Center"/>
+                    </Grid>
+                    <TextBlock DockPanel.Dock="Top" Classes="Appear"
+                               Text="No alternate keys on this table."
+                               IsVisible="{Binding !Keys.Count}"
+                               FontSize="12" Foreground="#AEAEB2" Margin="14,12"/>
+                    <ListBox ItemsSource="{Binding Keys}"
+                             Background="Transparent" BorderThickness="0" Padding="0"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="models:KeyItem">
+                                <Grid ColumnDefinitions="1.4*,1.4*,2*,90" Height="34" Background="Transparent">
+                                    <Grid.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="Copy Logical Name" Command="{x:Static local:CopyCommand.Instance}" CommandParameter="{Binding LogicalName}"/>
+                                            <MenuItem Header="Copy Columns" Command="{x:Static local:CopyCommand.Instance}" CommandParameter="{Binding Columns}"/>
+                                        </ContextMenu>
+                                    </Grid.ContextMenu>
+                                    <TextBlock Grid.Column="0" Text="{Binding Title}"
+                                               FontSize="12" Foreground="#1C1C1E"
+                                               VerticalAlignment="Center" ClipToBounds="True"
+                                               TextTrimming="CharacterEllipsis" Margin="14,0,6,0"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding LogicalName}"
+                                               FontSize="12" Foreground="#636366" FontFamily="SF Mono,Menlo,monospace"
+                                               VerticalAlignment="Center" ClipToBounds="True"
+                                               TextTrimming="CharacterEllipsis" Margin="0,0,6,0"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding Columns}"
+                                               FontSize="12" Foreground="#3C3C43" FontFamily="SF Mono,Menlo,monospace"
+                                               VerticalAlignment="Center" ClipToBounds="True"
+                                               TextTrimming="CharacterEllipsis" Margin="0,0,6,0"/>
+                                    <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                        <Ellipse Width="7" Height="7" Fill="{Binding StatusColor}" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding Status}" FontSize="11" Foreground="#636366" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                        <ListBox.Styles>
+                            <Style Selector="ListBoxItem">
+                                <Setter Property="Padding" Value="0"/>
+                            </Style>
+                            <Style Selector="ListBoxItem:nth-child(2n) /template/ ContentPresenter">
+                                <Setter Property="Background" Value="#FAFAFB"/>
+                            </Style>
+                            <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
+                                <Setter Property="Background" Value="#0F000000"/>
+                            </Style>
+                            <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+                                <Setter Property="Background" Value="{DynamicResource TintBrush}"/>
+                            </Style>
+                        </ListBox.Styles>
+                    </ListBox>
+                </DockPanel>
+                </TabItem>
+                </TabControl>
             </Grid>
         </Grid>
     </Grid>
