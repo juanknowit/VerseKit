@@ -112,6 +112,18 @@
             <Setter Property="MinHeight" Value="36"/>
         </Style>
 
+        <!-- ══ Flyout popover — white, rounded, hairline edge (macOS
+             popover) instead of Fluent's grey panel. Keep content ≤ ~420px
+             wide: the presenter's MaxWidth minus padding is the limit, past
+             which it scrolls horizontally and clips. -->
+        <Style Selector="FlyoutPresenter">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#E5E5EA"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="14,12"/>
+        </Style>
+
         <!-- ══ ComboBox — filled field, matches TextBox ═══════════ -->
         <Style Selector="ComboBox">
             <Setter Property="Background" Value="White"/>

@@ -11,6 +11,7 @@ using Microsoft.PowerPlatform.Dataverse.Client;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 using QueryRunner.Models;
+using QueryRunner.Services;
 using VerseKit.PluginSdk;
 
 namespace QueryRunner.ViewModels;
@@ -45,14 +46,33 @@ public sealed partial class QueryRunnerViewModel : ObservableObject
     /// <summary>Set by the view — save dialog. Args: suggested name, extension.</summary>
     public Func<string, string, Task<string?>>? PickSavePathAsync { get; set; }
 
+    // ── History (recent + saved queries, per connection) ─────────────
+    private string? _historyKey;
+
+    public ObservableCollection<StoredQuery> RecentQueries { get; } = [];
+    public ObservableCollection<StoredQuery> SavedQueries { get; } = [];
+
+    /// <summary>Name typed in the Queries panel for "Save current query".</summary>
+    [ObservableProperty] private string _saveName = string.Empty;
+
+    /// <summary>Raised when a stored query is loaded, so the view can close the panel.</summary>
+    public event Action? QueryLoaded;
+
     public QueryRunnerViewModel(IConnectionProvider connectionProvider)
     {
         _connectionProvider = connectionProvider;
         _connectionProvider.ConnectionChanged.Subscribe(client =>
             Dispatcher.UIThread.Post(() =>
             {
-                if (client is not { IsReady: true })
+                if (client is { IsReady: true })
                 {
+                    LoadHistory();
+                }
+                else
+                {
+                    _historyKey = null;
+                    RecentQueries.Clear();
+                    SavedQueries.Clear();
                     Rows.Clear();
                     ResultColumns = [];
                     HasResults = false;
@@ -60,6 +80,83 @@ public sealed partial class QueryRunnerViewModel : ObservableObject
                     Status = "Connect to an environment, then run a query.";
                 }
             }));
+
+        if (_connectionProvider.ActiveConnectionName is not null)
+            LoadHistory();
+    }
+
+    /// <summary>Loads the history for the active connection (the view may be
+    /// created after the connection is already up).</summary>
+    private void LoadHistory()
+    {
+        _historyKey = _connectionProvider.ActiveConnectionName ?? "default";
+        var (recent, saved) = QueryStore.Load(_historyKey);
+        RecentQueries.Clear();
+        foreach (var q in recent) RecentQueries.Add(q);
+        SavedQueries.Clear();
+        foreach (var q in saved.OrderBy(q => q.Name, StringComparer.OrdinalIgnoreCase)) SavedQueries.Add(q);
+    }
+
+    private void PersistHistory()
+    {
+        if (_historyKey is { } key) QueryStore.Save(key, RecentQueries, SavedQueries);
+    }
+
+    /// <summary>Puts a successful query at the top of Recent (deduped, capped).</summary>
+    private void RecordRecent(int mode, string text)
+    {
+        if (_historyKey is null) return;
+        var existing = RecentQueries.FirstOrDefault(q => q.Mode == mode && q.Text == text);
+        if (existing is not null) RecentQueries.Remove(existing);
+        RecentQueries.Insert(0, new StoredQuery("", mode, text, DateTime.Now));
+        while (RecentQueries.Count > QueryStore.MaxRecent) RecentQueries.RemoveAt(RecentQueries.Count - 1);
+        PersistHistory();
+    }
+
+    [RelayCommand]
+    private void LoadQuery(StoredQuery? query)
+    {
+        if (query is null) return;
+        ModeIndex = query.Mode;
+        QueryText = query.Text;
+        Status = query.Name.Length > 0 ? $"Loaded \"{query.Name}\"." : "Loaded a recent query.";
+        QueryLoaded?.Invoke();
+    }
+
+    /// <summary>Saves the editor's query under <see cref="SaveName"/> (replacing a
+    /// saved query of the same name).</summary>
+    [RelayCommand]
+    private void SaveQuery()
+    {
+        var text = QueryText?.Trim() ?? "";
+        if (text.Length == 0) { Status = "Nothing to save — the editor is empty."; return; }
+        if (_historyKey is null) LoadHistory();
+
+        var name = SaveName.Trim();
+        if (name.Length == 0) name = $"Query {SavedQueries.Count + 1}";
+
+        var existing = SavedQueries.FirstOrDefault(q => q.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        if (existing is not null) SavedQueries.Remove(existing);
+        var saved = new StoredQuery(name, ModeIndex, text, DateTime.Now);
+        var index = SavedQueries.TakeWhile(q => string.Compare(q.Name, name, StringComparison.OrdinalIgnoreCase) < 0).Count();
+        SavedQueries.Insert(index, saved);
+        SaveName = string.Empty;
+        PersistHistory();
+        Status = $"Saved \"{name}\".";
+    }
+
+    [RelayCommand]
+    private void DeleteSaved(StoredQuery? query)
+    {
+        if (query is null || !SavedQueries.Remove(query)) return;
+        PersistHistory();
+    }
+
+    [RelayCommand]
+    private void ClearRecent()
+    {
+        RecentQueries.Clear();
+        PersistHistory();
     }
 
     partial void OnModeIndexChanged(int value)
@@ -78,6 +175,7 @@ public sealed partial class QueryRunnerViewModel : ObservableObject
 
         IsRunning = true;
         Status = "Running…";
+        var mode = ModeIndex;
         try
         {
             var client = await _connectionProvider.GetActiveConnectionAsync(CancellationToken.None);
@@ -96,6 +194,7 @@ public sealed partial class QueryRunnerViewModel : ObservableObject
                 Status = $"{result.rows.Count} row(s)" +
                          (result.more ? " (more available — raise the top/limit)" : "") +
                          $" · {ResultColumns.Count} column(s)";
+                RecordRecent(mode, query);
             });
         }
         catch (Exception ex)

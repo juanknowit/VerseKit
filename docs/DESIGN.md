@@ -134,6 +134,9 @@ and rejected. Focus is indicated by the caret and selection only — keep it qui
 - `FocusAdorner` is removed (`{x:Null}`) so no square focus rectangle is drawn over
   the rounded field.
 - Placeholder text uses `PlaceholderText` (not the obsolete `Watermark`).
+- `AutoCompleteBox` (pickers like "Compare with a role…") gets the same pill
+  look. Set it on the `AutoCompleteBox` itself: its inner TextBox takes
+  border/corners/padding via TemplateBinding, which outranks the TextBox style.
 
 ---
 
@@ -175,6 +178,9 @@ and rejected. Focus is indicated by the caret and selection only — keep it qui
   older hosts) — copy them from Flow Runs for a new grid. Per-row actions are
   quiet `IconBtn` links that take the accent on row hover/selection, and
   double-clicking a row opens it.
+- **Popovers** (`Flyout`): white, radius 12, `#E5E5EA` hairline, padding `14,12`
+  (`FlyoutPresenter` in `App.axaml`). Keep flyout content ≤ ~420px wide — past
+  the presenter's MaxWidth it scrolls horizontally and clips.
 - **Switches** (`ToggleSwitch`): macOS style from `App.axaml` — no outline,
   `#E5E5EA` track when off, accent track when on, 16px white knob.
 - **Plugins manager** (Tools › Manage): a tool's switch *is* its install state.
