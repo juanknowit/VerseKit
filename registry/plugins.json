@@ -4,76 +4,76 @@
     {
       "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
       "name": "Resource Manager",
-      "description": "View, create, and update web resources in your Dynamics 365 environment.",
-      "version": "1.0.0",
+      "description": "View, create, and update web resources in your Dynamics 365 environment, and review your changes before saving.",
+      "version": "1.1.0",
       "author": "VerseKit",
-      "downloadUrl": "https://github.com/juanknowit/VerseKit/releases/download/plugins-v2/ResourceManager.zip",
-      "sha256": "2dd8737511e4f15aed00e36f01f5a3bdd3606127d6213d39a8d227007e7700cd"
+      "downloadUrl": "https://github.com/juanknowit/VerseKit/releases/download/plugins-v11/ResourceManager.zip",
+      "sha256": "b0e0022ebbaad3ed2d7b677cd64fe06581c677f75efe8202ede166d026e389dd"
     },
     {
       "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
       "name": "Table Browser",
-      "description": "Browse tables (entities) and their columns (attributes) — read only.",
-      "version": "1.0.0",
+      "description": "Browse tables (entities) with their columns, relationships and alternate keys — read only.",
+      "version": "1.1.0",
       "author": "VerseKit",
-      "downloadUrl": "https://github.com/juanknowit/VerseKit/releases/download/plugins-v2/TableBrowser.zip",
-      "sha256": "031d9e190121a537123ede3229c8e502c9a68e0872055964d9647f0d59cff75a"
+      "downloadUrl": "https://github.com/juanknowit/VerseKit/releases/download/plugins-v11/TableBrowser.zip",
+      "sha256": "395cf5956c325d2fbf0ff17a391dfd65dc1e0ecc1b36ffa29cdb4515b5089d08"
     },
     {
       "id": "c3d4e5f6-a7b8-9012-cdef-345678901234",
       "name": "Security Roles",
-      "description": "Browse security roles and see which users and teams are assigned to each — read only.",
-      "version": "1.0.0",
+      "description": "Browse security roles, see which users and teams hold each, and compare two roles — read only.",
+      "version": "1.1.0",
       "author": "VerseKit",
-      "downloadUrl": "https://github.com/juanknowit/VerseKit/releases/download/plugins-v2/SecurityRoles.zip",
-      "sha256": "30c3f5c17f8d599413b1589a5947c3ed93ec474d525364f31ba7ad9b36110ef8"
+      "downloadUrl": "https://github.com/juanknowit/VerseKit/releases/download/plugins-v11/SecurityRoles.zip",
+      "sha256": "85ccf96d05334168b1e571c1ba6a283c9330f0cf6dab6914ebc5094f3c221f48"
     },
     {
       "id": "d4e5f6a7-b8c9-0123-defa-456789012345",
       "name": "Access Checker",
-      "description": "See a user's effective table privileges across all their roles and teams, and compare two users — read only.",
-      "version": "1.1.0",
+      "description": "See a user's effective table privileges across all their roles and teams, which role grants each, and compare two users — read only.",
+      "version": "1.2.0",
       "author": "VerseKit",
-      "downloadUrl": "https://github.com/juanknowit/VerseKit/releases/download/plugins-v9/AccessChecker.zip",
-      "sha256": "0120a3da5862317f679054162a568789f31038cbc3ec4896b77c5767e8a368d2"
+      "downloadUrl": "https://github.com/juanknowit/VerseKit/releases/download/plugins-v11/AccessChecker.zip",
+      "sha256": "2f8f3bf41d328ba7ab93c0e5a51b9a65d81637df5d73570af0d88264997ecf28"
     },
     {
       "id": "e5f6a7b8-c9d0-1234-efab-567890123456",
       "name": "Solution Explorer",
-      "description": "Browse solutions, see their components, and export managed/unmanaged to disk.",
-      "version": "1.2.0",
+      "description": "Browse solutions, see their components, check for missing dependencies, and export managed/unmanaged to disk.",
+      "version": "1.3.0",
       "author": "VerseKit",
-      "downloadUrl": "https://github.com/juanknowit/VerseKit/releases/download/plugins-v10/SolutionExplorer.zip",
-      "sha256": "6412d6ebec0be0289761732d0ab5b58dab538fb0870b1825e8fd50496387f297"
+      "downloadUrl": "https://github.com/juanknowit/VerseKit/releases/download/plugins-v11/SolutionExplorer.zip",
+      "sha256": "534144862cc2fb9b3fc4dfc2764d691da507f4cb3952b97c57040adfd003dc75"
     },
     {
       "id": "f6a7b8c9-d0e1-2345-fabc-678901234568",
       "name": "Query Runner",
-      "description": "Run FetchXML or OData queries, view results in a grid, and export to CSV/Excel — read only.",
-      "version": "1.1.0",
+      "description": "Run FetchXML or OData queries with history and saved queries, view results in a grid, and export to CSV/Excel — read only.",
+      "version": "1.2.0",
       "author": "VerseKit",
-      "downloadUrl": "https://github.com/juanknowit/VerseKit/releases/download/plugins-v6/QueryRunner.zip",
-      "sha256": "f574e488f89a7fc3cf21dad9c51dbd172d59fa703caf3495707660708d0b2177",
+      "downloadUrl": "https://github.com/juanknowit/VerseKit/releases/download/plugins-v11/QueryRunner.zip",
+      "sha256": "dcfdb737e29d59c60f7d1e4a5b83fc39fb56b60af45b344b34b250c647e84572",
       "beta": true
     },
     {
       "id": "a7b8c9d0-e1f2-3456-abcd-789012345671",
       "name": "Dependency Viewer",
-      "description": "See what depends on a table before deleting it — read only.",
-      "version": "1.0.0",
+      "description": "See what depends on a table or column before deleting it — read only.",
+      "version": "1.1.0",
       "author": "VerseKit",
-      "downloadUrl": "https://github.com/juanknowit/VerseKit/releases/download/plugins-v7/DependencyViewer.zip",
-      "sha256": "64fe473244d9845cc0a668ba3159ccecd4a3800506c07a543b026e1d737bfd33",
+      "downloadUrl": "https://github.com/juanknowit/VerseKit/releases/download/plugins-v11/DependencyViewer.zip",
+      "sha256": "26bacdf64643ba9f1ff035c9cc999ad71ac7245a95a31bcaf6153f0851fa76e2",
       "beta": true
     },
     {
       "id": "b8c9d0e1-f2a3-4567-bcde-000000000000",
       "name": "Flow Runs",
-      "description": "View and export cloud flow run history (succeeded, failed, cancelled) from Dataverse — read only.",
-      "version": "1.0.0",
+      "description": "View and export cloud flow run history (succeeded, failed, cancelled) from Dataverse, and open runs in Power Automate — read only.",
+      "version": "1.1.0",
       "author": "VerseKit",
-      "downloadUrl": "https://github.com/juanknowit/VerseKit/releases/download/plugins-v8/FlowRuns.zip",
-      "sha256": "33471c5a804d255b4ea118012d1d5b971e51b217a6db774d3dd2f3a68e144ac5",
+      "downloadUrl": "https://github.com/juanknowit/VerseKit/releases/download/plugins-v11/FlowRuns.zip",
+      "sha256": "50261f7670202e7532a16387af7c7ce66349599639c718680f2f84d2408d3f0e",
       "beta": true
     }
   ]
