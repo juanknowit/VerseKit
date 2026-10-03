@@ -98,6 +98,32 @@
             <Setter Property="BorderBrush" Value="{StaticResource PillEdgeBrush}"/>
         </Style>
 
+        <!-- ══ AutoCompleteBox — white pill, matches TextBox ═══════
+             Its inner TextBox takes border/corner/padding from these via
+             TemplateBinding (which outranks the TextBox style above), so the
+             pill look has to be set here or it renders as a square box. -->
+        <Style Selector="AutoCompleteBox">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{StaticResource PillEdgeBrush}"/>
+            <Setter Property="CornerRadius" Value="18"/>
+            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="MinHeight" Value="36"/>
+        </Style>
+
+        <!-- ══ Flyout popover — white, rounded, hairline edge (macOS
+             popover) instead of Fluent's grey panel. Keep content ≤ ~420px
+             wide: the presenter's MaxWidth minus padding is the limit, past
+             which it scrolls horizontally and clips. -->
+        <Style Selector="FlyoutPresenter">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#E5E5EA"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="14,12"/>
+        </Style>
+
         <!-- ══ ComboBox — filled field, matches TextBox ═══════════ -->
         <Style Selector="ComboBox">
             <Setter Property="Background" Value="White"/>
@@ -176,6 +202,14 @@
         <Style Selector="Button:disabled /template/ ContentPresenter">
             <Setter Property="Opacity" Value="0.45"/>
         </Style>
+        <!-- Keep each button's own text colour on hover/press. Fluent forces
+             ButtonForegroundPointerOver/Pressed (near-black) onto the content
+             presenter, and text content has no TextBlock for the TextBlock rules
+             to reach — so red (Danger), grey (IconBtn) and accent text flipped to
+             black under the pointer. -->
+        <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Foreground" Value="{Binding $parent[Button].Foreground}"/>
+        </Style>
         <!-- Ghost buttons (icon, sidebar rows) carry no edge -->
         <Style Selector="Button.IconBtn, Button.SidebarProfile, Button.DeleteBtn">
             <Setter Property="BorderThickness" Value="0"/>
@@ -199,6 +233,36 @@
         </Style>
         <Style Selector="Button.Danger:pressed TextBlock">
             <Setter Property="Foreground" Value="{StaticResource DangerTextBrush}"/>
+        </Style>
+
+        <!-- ── Switch (ToggleSwitch) — macOS style ─────────────────
+             Fluent draws a Windows switch: an outlined track with a small
+             10px knob (black when off). macOS: no outline, light-grey track
+             when off, accent track when on, and a white knob that nearly
+             fills the height. -->
+        <!-- (State selectors on purpose: the knob/track values are set inside the
+             Fluent template, which outranks plain styles — only :checked /
+             :unchecked rules, i.e. style triggers, can override them.) -->
+        <Style Selector="ToggleSwitch:unchecked /template/ Border#OuterBorder, ToggleSwitch:checked /template/ Border#OuterBorder">
+            <Setter Property="Background" Value="#E5E5EA"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+        <Style Selector="ToggleSwitch:unchecked:pointerover /template/ Border#OuterBorder">
+            <Setter Property="Background" Value="#DADADF"/>
+        </Style>
+        <Style Selector="ToggleSwitch:unchecked /template/ Border#SwitchKnobBounds, ToggleSwitch:checked /template/ Border#SwitchKnobBounds">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+        <Style Selector="ToggleSwitch:checked:pointerover /template/ Border#SwitchKnobBounds">
+            <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
+        </Style>
+        <Style Selector="ToggleSwitch:unchecked /template/ Ellipse#SwitchKnobOff, ToggleSwitch:checked /template/ Ellipse#SwitchKnobOff, ToggleSwitch:unchecked /template/ Ellipse#SwitchKnobOn, ToggleSwitch:checked /template/ Ellipse#SwitchKnobOn">
+            <Setter Property="Width" Value="16"/>
+            <Setter Property="Height" Value="16"/>
+            <Setter Property="Fill" Value="White"/>
+            <Setter Property="Stroke" Value="#1F000000"/>
+            <Setter Property="StrokeThickness" Value="0.5"/>
         </Style>
 
         <!-- Primary / Success now share the white floating-pill look
@@ -336,6 +400,148 @@
             <Setter Property="Padding" Value="28,24"/>
             <Setter Property="BoxShadow" Value="0 6 20 2 #2E000000"/>
             <Setter Property="Background" Value="White"/>
+        </Style>
+
+        <!-- ══ Motion ════════════════════════════════════════════════
+             Apple-style fluid motion (see DESIGN.md §7). Rules:
+             respond on pointer-down, animate from the current value
+             (Avalonia transitions are interruptible), exit along the
+             entry path, and honour macOS Reduce Motion (Window.ReduceMotion).
+
+             Springs: Avalonia's SpringEasing runs in normalised time
+             (0..1 of the transition Duration), so Apple's "response" R is
+             converted as ωn = 2π/R × Duration, Stiffness = ωn², Damping =
+             2ωn (damping ratio 1.0 — critically damped, no overshoot). The
+             Duration is sized so the spring has settled (<0.5%) by the end.
+               Sheet:  R 0.35s, Duration 0.45s → Stiffness 65, Damping 16.2
+               Swatch: R 0.30s, Duration 0.35s → Stiffness 54, Damping 14.7 -->
+
+        <!-- Modal sheet overlay. Pair with behaviors:Sheet.IsOpen, which adds
+             the "open" class and hides the overlay once it has faded out. -->
+        <Style Selector="Panel.SheetOverlay">
+            <Setter Property="IsVisible" Value="False"/>
+            <Setter Property="Opacity" Value="0"/>
+            <Setter Property="IsHitTestVisible" Value="False"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.2" Easing="CubicEaseOut"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Panel.SheetOverlay.open">
+            <Setter Property="Opacity" Value="1"/>
+            <Setter Property="IsHitTestVisible" Value="True"/>
+        </Style>
+        <!-- Materialise: scale up from 96% anchored toward the control that
+             opened it (set RenderTransformOrigin on the card; default is the
+             top-right Settings cog) and shrink back along the same path. -->
+        <Style Selector="Panel.SheetOverlay > Border.FormCard">
+            <Setter Property="RenderTransformOrigin" Value="100%,0%"/>
+            <Setter Property="RenderTransform" Value="scale(0.96)"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.45">
+                        <TransformOperationsTransition.Easing>
+                            <SpringEasing Mass="1" Stiffness="65" Damping="16.2"/>
+                        </TransformOperationsTransition.Easing>
+                    </TransformOperationsTransition>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Panel.SheetOverlay.open > Border.FormCard">
+            <Setter Property="RenderTransform" Value="scale(1)"/>
+        </Style>
+
+        <!-- Press feedback on pointer-down: a quick dip on every button.
+             Small targets dip further so the response is visible; full-width
+             rows and scrims keep their press fill instead (a 3% shrink of a
+             wide row reads as a jump). -->
+        <Style Selector="Button">
+            <Setter Property="RenderTransform" Value="scale(1)"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" Easing="CubicEaseOut"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button:pressed">
+            <Setter Property="RenderTransform" Value="scale(0.97)"/>
+        </Style>
+        <Style Selector="Button.IconBtn:pressed, Button.DeleteBtn:pressed, Button.Swatch:pressed">
+            <Setter Property="RenderTransform" Value="scale(0.9)"/>
+        </Style>
+        <Style Selector="Button.SidebarProfile:pressed, Button.Scrim:pressed">
+            <Setter Property="RenderTransform" Value="scale(1)"/>
+        </Style>
+        <!-- Hover-revealed row affordances fade in; keeps the press dip too.
+             (Must follow the shared Button rule — later styles win.) -->
+        <Style Selector="Button.DeleteBtn">
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.12" Easing="CubicEaseOut"/>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" Easing="CubicEaseOut"/>
+                </Transitions>
+            </Setter>
+        </Style>
+
+        <!-- Content that appears (details panes, empty states, the welcome
+             screen) fades in rather than popping. Opacity only, so it is
+             also safe under Reduce Motion. -->
+        <Style Selector=":is(Control).Appear[IsVisible=true]">
+            <Style.Animations>
+                <Animation Duration="0:0:0.18" Easing="CubicEaseOut">
+                    <KeyFrame Cue="0%">
+                        <Setter Property="Opacity" Value="0"/>
+                    </KeyFrame>
+                    <KeyFrame Cue="100%">
+                        <Setter Property="Opacity" Value="1"/>
+                    </KeyFrame>
+                </Animation>
+            </Style.Animations>
+        </Style>
+        <!-- A newly opened tool fades in (the outgoing view is removed
+             immediately, so one control is never in two places). -->
+        <Style Selector="ContentControl.Workspace /template/ ContentPresenter > :is(Control)">
+            <Style.Animations>
+                <Animation Duration="0:0:0.18" Easing="CubicEaseOut">
+                    <KeyFrame Cue="0%">
+                        <Setter Property="Opacity" Value="0"/>
+                    </KeyFrame>
+                    <KeyFrame Cue="100%">
+                        <Setter Property="Opacity" Value="1"/>
+                    </KeyFrame>
+                </Animation>
+            </Style.Animations>
+        </Style>
+
+        <!-- Accent swatch selection ring grows in rather than popping. -->
+        <Style Selector="Ellipse.SwatchRing">
+            <Setter Property="Opacity" Value="0"/>
+            <Setter Property="RenderTransform" Value="scale(0.7)"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.15" Easing="CubicEaseOut"/>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.35">
+                        <TransformOperationsTransition.Easing>
+                            <SpringEasing Mass="1" Stiffness="54" Damping="14.7"/>
+                        </TransformOperationsTransition.Easing>
+                    </TransformOperationsTransition>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Ellipse.SwatchRing.selected">
+            <Setter Property="Opacity" Value="1"/>
+            <Setter Property="RenderTransform" Value="scale(1)"/>
+        </Style>
+
+        <!-- Reduce motion (macOS Accessibility): no scaling or sliding —
+             sheets and rings simply cross-fade. Must stay after the rules
+             above so these win. -->
+        <Style Selector="Window.ReduceMotion Panel.SheetOverlay > Border.FormCard">
+            <Setter Property="RenderTransform" Value="scale(1)"/>
+        </Style>
+        <Style Selector="Window.ReduceMotion Ellipse.SwatchRing">
+            <Setter Property="RenderTransform" Value="scale(1)"/>
         </Style>
     </Application.Styles>
 </Application>

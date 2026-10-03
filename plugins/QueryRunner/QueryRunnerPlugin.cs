@@ -14,8 +14,8 @@ public sealed class QueryRunnerPlugin : IVerseKitPlugin
     // GUID chosen so the icon-colour hash lands on an unused palette slot (indigo).
     public Guid PluginId => new("f6a7b8c9-d0e1-2345-fabc-678901234568");
     public string Name => "Query Runner";
-    public string Description => "Run FetchXML or OData queries, view results in a grid, and export to CSV/Excel — read only";
-    public string Version => "1.1.0";
+    public string Description => "Run FetchXML or OData queries with history and saved queries, view results in a grid, and export to CSV/Excel — read only";
+    public string Version => "1.2.0";
 
     private IConnectionProvider? _connectionProvider;
 

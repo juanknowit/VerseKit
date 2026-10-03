@@ -13,4 +13,7 @@ public sealed class RoleItem
 
     public string TypeBadge => IsManaged ? "MANAGED" : "CUSTOM";
     public string TypeColor => IsManaged ? "#8E8E93" : "#AF52DE";
+
+    // The compare picker (AutoCompleteBox) filters and displays by this.
+    public override string ToString() => Title;
 }

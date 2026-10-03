@@ -17,12 +17,19 @@ public sealed partial class DependencyViewerViewModel : ObservableObject
 {
     private const StringComparison OIC = StringComparison.OrdinalIgnoreCase;
     private const int EntityComponentType = 1;
+    private const int AttributeComponentType = 2;
 
     private readonly IConnectionProvider _connectionProvider;
     private List<EntityListItem> _allTables = [];
 
     public ObservableCollection<EntityListItem> Tables { get; } = [];
     public ObservableCollection<DependencyItem> Dependencies { get; } = [];
+
+    /// <summary>"Whole table" followed by the table's custom columns (the only
+    /// columns that can be deleted).</summary>
+    public ObservableCollection<ScopeOption> Scopes { get; } = [];
+
+    [ObservableProperty] private ScopeOption? _selectedScope;
 
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private bool _isDependenciesLoading;
@@ -57,20 +64,9 @@ public sealed partial class DependencyViewerViewModel : ObservableObject
             }));
     }
 
-    private CancellationTokenSource? _filterDebounce;
-
-    partial void OnFilterTextChanged(string value)
-    {
-        _filterDebounce?.Cancel();
-        var cts = _filterDebounce = new CancellationTokenSource();
-        _ = DebouncedFilterAsync(cts.Token);
-    }
-
-    private async Task DebouncedFilterAsync(CancellationToken ct)
-    {
-        try { await Task.Delay(200, ct); ApplyFilter(); }
-        catch (OperationCanceledException) { }
-    }
+    // Filter on every keystroke — local and cheap, and instant feedback
+    // matters more than saving work (DESIGN.md §7, "respond immediately").
+    partial void OnFilterTextChanged(string value) => ApplyFilter();
 
     private void ApplyFilter()
     {
@@ -124,13 +120,71 @@ public sealed partial class DependencyViewerViewModel : ObservableObject
 
     partial void OnSelectedTableChanged(EntityListItem? value)
     {
+        Scopes.Clear();
+        Dependencies.Clear();
+        DependenciesStatus = string.Empty;
+        if (value is null) { SelectedScope = null; return; }
+
+        var whole = new ScopeOption
+        {
+            ComponentType = EntityComponentType, MetadataId = value.MetadataId,
+            Title = "Whole table", LogicalName = value.LogicalName
+        };
+        Scopes.Add(whole);
+        SelectedScope = whole;       // checks the table right away
+        _ = LoadColumnsAsync(value, CancellationToken.None);
+    }
+
+    partial void OnSelectedScopeChanged(ScopeOption? value)
+    {
         Dependencies.Clear();
         DependenciesStatus = string.Empty;
         if (value is not null)
             _ = LoadDependenciesAsync(value, CancellationToken.None);
     }
 
-    private async Task LoadDependenciesAsync(EntityListItem table, CancellationToken ct)
+    /// <summary>Adds the table's custom columns as scope choices.</summary>
+    private async Task LoadColumnsAsync(EntityListItem table, CancellationToken ct)
+    {
+        try
+        {
+            var client = await _connectionProvider.GetActiveConnectionAsync(ct);
+            var resp = (RetrieveEntityResponse)await client.ExecuteAsync(
+                new RetrieveEntityRequest
+                {
+                    LogicalName = table.LogicalName,
+                    EntityFilters = EntityFilters.Attributes,
+                    RetrieveAsIfPublished = true
+                }, ct);
+
+            var columns = (resp.EntityMetadata.Attributes ?? [])
+                // Custom, real columns only: system columns can't be deleted, and
+                // AttributeOf marks generated companions (e.g. a lookup's name).
+                .Where(a => a.IsCustomAttribute == true && a.AttributeOf is null && a.MetadataId.HasValue)
+                .Select(a => new ScopeOption
+                {
+                    ComponentType = AttributeComponentType,
+                    MetadataId = a.MetadataId!.Value,
+                    Title = a.DisplayName?.UserLocalizedLabel?.Label is { Length: > 0 } label ? label : a.LogicalName ?? "",
+                    LogicalName = a.LogicalName ?? ""
+                })
+                .OrderBy(c => c.Title, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (SelectedTable != table) return;
+                foreach (var c in columns) Scopes.Add(c);
+            });
+        }
+        catch (Exception ex)
+        {
+            // The table check still works; just no column choices.
+            Dispatcher.UIThread.Post(() => StatusMessage = $"Couldn't load columns: {ex.Message}");
+        }
+    }
+
+    private async Task LoadDependenciesAsync(ScopeOption scope, CancellationToken ct)
     {
         IsDependenciesLoading = true;
         DependenciesStatus = "Checking dependencies…";
@@ -141,8 +195,8 @@ public sealed partial class DependencyViewerViewModel : ObservableObject
             var resp = (RetrieveDependenciesForDeleteResponse)await client.ExecuteAsync(
                 new RetrieveDependenciesForDeleteRequest
                 {
-                    ComponentType = EntityComponentType,
-                    ObjectId = table.MetadataId
+                    ComponentType = scope.ComponentType,
+                    ObjectId = scope.MetadataId
                 }, ct);
 
             // Each "dependency" row: a dependent component that blocks deletion.
@@ -173,13 +227,15 @@ public sealed partial class DependencyViewerViewModel : ObservableObject
                 .ThenBy(i => i.Name, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
+            var what = scope.IsTable ? "table" : "column";
             Dispatcher.UIThread.Post(() =>
             {
+                if (SelectedScope != scope) return;   // superseded by a newer choice
                 Dependencies.Clear();
                 foreach (var i in items) Dependencies.Add(i);
                 DependenciesStatus = items.Count == 0
-                    ? "No dependencies — this table is safe to delete."
-                    : $"{items.Count} dependent component(s) — these block deletion.";
+                    ? $"No dependencies — this {what} is safe to delete."
+                    : $"{items.Count} dependent component(s) — these block deleting the {what}.";
             });
         }
         catch (Exception ex)

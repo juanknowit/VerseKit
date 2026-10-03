@@ -8,6 +8,7 @@ using Microsoft.PowerPlatform.Dataverse.Client;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 using ResourceManager.Models;
+using ResourceManager.Services;
 using VerseKit.PluginSdk;
 
 namespace ResourceManager.ViewModels;
@@ -75,6 +76,8 @@ public sealed partial class WebResourcesViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsBinaryResource))]
     [NotifyPropertyChangedFor(nameof(IsNothingSelected))]
     [NotifyPropertyChangedFor(nameof(IsScriptResource))]
+    [NotifyPropertyChangedFor(nameof(IsCodeEditorVisible))]
+    [NotifyCanExecuteChangedFor(nameof(ToggleDiffCommand))]
     [NotifyCanExecuteChangedFor(nameof(SaveResourceCommand))]
     [NotifyCanExecuteChangedFor(nameof(PublishResourceCommand))]
     [NotifyCanExecuteChangedFor(nameof(CheckSyntaxCommand))]
@@ -83,7 +86,21 @@ public sealed partial class WebResourcesViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveResourceCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ToggleDiffCommand))]
     private bool _isDirty;
+
+    // ── Review Changes (diff of saved vs edited text) ────────────────
+    public ObservableCollection<DiffLine> DiffLines { get; } = [];
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsCodeEditorVisible), nameof(DiffButtonLabel))]
+    [NotifyCanExecuteChangedFor(nameof(ToggleDiffCommand), nameof(HideDiffCommand))]
+    private bool _isDiffVisible;
+
+    [ObservableProperty] private string _diffSummary = string.Empty;
+
+    public bool IsCodeEditorVisible => IsTextResource && !IsDiffVisible;
+    public string DiffButtonLabel => IsDiffVisible ? "Back to Editor" : "Review Changes";
 
     [ObservableProperty] private string _editorText = string.Empty;
 
@@ -163,6 +180,32 @@ public sealed partial class WebResourcesViewModel : ObservableObject
     }
 
     // ── Editor tracking ──────────────────────────────────────────────
+
+    // Saving (or loading another resource) clears the changes, so the diff goes too.
+    partial void OnIsDirtyChanged(bool value)
+    {
+        if (!value) IsDiffVisible = false;
+    }
+
+    private bool CanToggleDiff() => IsDiffVisible || (IsDirty && IsTextResource);
+
+    [RelayCommand(CanExecute = nameof(CanToggleDiff))]
+    private void ToggleDiff()
+    {
+        if (IsDiffVisible) { IsDiffVisible = false; return; }
+
+        var rows = LineDiff.Compute(_loadedText, EditorText);
+        DiffLines.Clear();
+        foreach (var r in rows) DiffLines.Add(r);
+        var added = rows.Count(r => r.Kind == DiffKind.Added);
+        var removed = rows.Count(r => r.Kind == DiffKind.Removed);
+        DiffSummary = rows.Count == 0 ? "No changes." : $"+{added}  −{removed} line(s) vs. the saved version";
+        IsDiffVisible = true;
+    }
+
+    // Esc returns to the editor; disabled otherwise so Esc falls through.
+    [RelayCommand(CanExecute = nameof(IsDiffVisible))]
+    private void HideDiff() => IsDiffVisible = false;
 
     partial void OnEditorTextChanged(string value)
     {

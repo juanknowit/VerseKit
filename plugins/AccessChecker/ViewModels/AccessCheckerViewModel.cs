@@ -45,6 +45,12 @@ public sealed partial class AccessCheckerViewModel : ObservableObject
     [ObservableProperty] private string _accessStatus = string.Empty;
     [ObservableProperty] private bool _showOnlyAssigned = true;
 
+    /// <summary>The matrix row whose "Why" panel is shown.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsPrivilegeSelected))]
+    private PrivilegeRow? _selectedPrivilege;
+    public bool IsPrivilegeSelected => SelectedPrivilege is not null;
+
     [ObservableProperty] private string _compareFilterText = string.Empty;
     [ObservableProperty] private string _compareStatus = string.Empty;
     [ObservableProperty] private bool _showOnlyDifferences = true;
@@ -105,20 +111,9 @@ public sealed partial class AccessCheckerViewModel : ObservableObject
             }));
     }
 
-    private CancellationTokenSource? _filterDebounce;
-
-    partial void OnFilterTextChanged(string value)
-    {
-        _filterDebounce?.Cancel();
-        var cts = _filterDebounce = new CancellationTokenSource();
-        _ = DebouncedFilterAsync(cts.Token);
-    }
-
-    private async Task DebouncedFilterAsync(CancellationToken ct)
-    {
-        try { await Task.Delay(200, ct); ApplyFilter(); }
-        catch (OperationCanceledException) { }
-    }
+    // Filter on every keystroke — local and cheap, and instant feedback
+    // matters more than saving work (DESIGN.md §7, "respond immediately").
+    partial void OnFilterTextChanged(string value) => ApplyFilter();
 
     private void ApplyFilter()
     {
@@ -197,6 +192,7 @@ public sealed partial class AccessCheckerViewModel : ObservableObject
         Roles.Clear();
         RolesStatus = string.Empty;
         Privileges.Clear();
+        SelectedPrivilege = null;
         _allPrivilegeRows = [];
         _accessLoadedForUser = null;
         _userMapA = new();
@@ -329,8 +325,9 @@ public sealed partial class AccessCheckerViewModel : ObservableObject
             var client = await _connectionProvider.GetActiveConnectionAsync(ct);
             await EnsurePrivilegeMetadataAsync(client, ct);
 
-            var userMap = await ComputeUserMapAsync(client, user.UserId, ct);
-            var rows = BuildRowsFromMap(userMap)
+            var grants = new Dictionary<Guid, List<AccessGrant>>();
+            var userMap = await ComputeUserMapAsync(client, user.UserId, ct, grants);
+            var rows = BuildRowsFromMap(userMap, grants)
                 .OrderBy(r => r.Title, StringComparer.OrdinalIgnoreCase).ToList();
 
             Dispatcher.UIThread.Post(() =>
@@ -352,46 +349,85 @@ public sealed partial class AccessCheckerViewModel : ObservableObject
     }
 
     /// <summary>Effective access = the union of every role the user holds, directly
-    /// and via team membership, keeping the deepest depth per privilege.</summary>
+    /// and via team membership, keeping the deepest depth per privilege. Pass
+    /// <paramref name="grants"/> to also collect which roles grant each privilege.</summary>
     private async Task<Dictionary<Guid, PrivilegeDepth>> ComputeUserMapAsync(
-        ServiceClient client, Guid userId, CancellationToken ct)
+        ServiceClient client, Guid userId, CancellationToken ct,
+        Dictionary<Guid, List<AccessGrant>>? grants = null)
     {
-        var roleIds = await GetEffectiveRoleIdsAsync(client, userId, ct);
+        var roles = await GetEffectiveRolesAsync(client, userId, ct);
         var map = new Dictionary<Guid, PrivilegeDepth>();
-        foreach (var roleId in roleIds)
+        foreach (var (roleId, (name, sources)) in roles)
         {
             ct.ThrowIfCancellationRequested();
             var resp = (RetrieveRolePrivilegesRoleResponse)await client.ExecuteAsync(
                 new RetrieveRolePrivilegesRoleRequest { RoleId = roleId }, ct);
             foreach (var rp in resp.RolePrivileges)
+            {
                 if (!map.TryGetValue(rp.PrivilegeId, out var existing) || rp.Depth > existing)
                     map[rp.PrivilegeId] = rp.Depth;
+
+                if (grants is null) continue;
+                if (!grants.TryGetValue(rp.PrivilegeId, out var list))
+                    grants[rp.PrivilegeId] = list = [];
+                foreach (var source in sources)
+                    list.Add(new AccessGrant(name, source, rp.Depth));
+            }
         }
         return map;
     }
 
-    private List<PrivilegeRow> BuildRowsFromMap(Dictionary<Guid, PrivilegeDepth> userMap)
+    private List<PrivilegeRow> BuildRowsFromMap(
+        Dictionary<Guid, PrivilegeDepth> userMap, Dictionary<Guid, List<AccessGrant>> grants)
     {
         var rows = new List<PrivilegeRow>(_entityPrivMeta.Count);
         foreach (var em in _entityPrivMeta)
         {
             var supported = SupportedFor(em, userMap);
+            AccessCell Cell(PrivilegeType type) => WithGrants(BuildCell(supported, type), em, type, grants);
             rows.Add(new PrivilegeRow
             {
                 Table = em.Table,
                 LogicalName = em.LogicalName,
                 Owner = em.Owner,
-                Create = BuildCell(supported, PrivilegeType.Create),
-                Read = BuildCell(supported, PrivilegeType.Read),
-                Write = BuildCell(supported, PrivilegeType.Write),
-                Delete = BuildCell(supported, PrivilegeType.Delete),
-                Append = BuildCell(supported, PrivilegeType.Append),
-                AppendTo = BuildCell(supported, PrivilegeType.AppendTo),
-                Assign = BuildCell(supported, PrivilegeType.Assign),
-                Share = BuildCell(supported, PrivilegeType.Share)
+                Create = Cell(PrivilegeType.Create),
+                Read = Cell(PrivilegeType.Read),
+                Write = Cell(PrivilegeType.Write),
+                Delete = Cell(PrivilegeType.Delete),
+                Append = Cell(PrivilegeType.Append),
+                AppendTo = Cell(PrivilegeType.AppendTo),
+                Assign = Cell(PrivilegeType.Assign),
+                Share = Cell(PrivilegeType.Share)
             });
         }
         return rows;
+    }
+
+    /// <summary>Adds the granting roles (deepest first) and a "why" tooltip to a cell.</summary>
+    private static AccessCell WithGrants(AccessCell cell, EntityPrivMeta em, PrivilegeType type,
+                                         Dictionary<Guid, List<AccessGrant>> grants)
+    {
+        if (!cell.Applicable) return cell;
+
+        var list = em.Privileges
+            .Where(p => p.Type == type && grants.ContainsKey(p.Id))
+            .SelectMany(p => grants[p.Id])
+            .Distinct()
+            .OrderByDescending(g => g.Depth)
+            .ThenBy(g => g.Role, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var tooltip = list.Count == 0
+            ? $"{cell.Full} — not granted by any of the user's roles"
+            : $"{cell.Full}\n\nGranted by:\n" + string.Join("\n",
+                list.Select(g => $"• {g.Role} ({g.SourceLabel}) — {AccessCell.DepthLabel(g.Depth)}"));
+
+        return new AccessCell
+        {
+            Applicable = true, Short = cell.Short, Full = cell.Full,
+            Color = cell.Color, TextColor = cell.TextColor,
+            Grants = list, Tooltip = tooltip,
+        };
     }
 
     /// <summary>The deepest depth the user has per privilege type on a table
@@ -577,27 +613,39 @@ public sealed partial class AccessCheckerViewModel : ObservableObject
 
     /// <summary>The distinct role ids the user has — directly and via every team
     /// they belong to.</summary>
-    private static async Task<List<Guid>> GetEffectiveRoleIdsAsync(
+    /// <summary>Every role the user holds → its name and how they hold it
+    /// ("Direct" and/or the names of the teams that carry it).</summary>
+    private static async Task<Dictionary<Guid, (string Name, List<string> Sources)>> GetEffectiveRolesAsync(
         ServiceClient client, Guid userId, CancellationToken ct)
     {
-        var ids = new HashSet<Guid>();
+        var roles = new Dictionary<Guid, (string Name, List<string> Sources)>();
+        void Add(Guid id, string? name, string source)
+        {
+            if (!roles.TryGetValue(id, out var r))
+                roles[id] = r = (name ?? "(unnamed role)", []);
+            if (!r.Sources.Contains(source)) r.Sources.Add(source);
+        }
 
         // Direct (systemuserroles intersect).
-        var directQuery = new QueryExpression("role") { ColumnSet = new ColumnSet("roleid") };
+        var directQuery = new QueryExpression("role") { ColumnSet = new ColumnSet("name") };
         var dLink = directQuery.AddLink("systemuserroles", "roleid", "roleid");
         dLink.LinkCriteria.AddCondition("systemuserid", ConditionOperator.Equal, userId);
         foreach (var e in (await client.RetrieveMultipleAsync(directQuery, ct)).Entities)
-            ids.Add(e.Id);
+            Add(e.Id, e.GetAttributeValue<string>("name"), "Direct");
 
-        // Via teams (role → teamroles → teammembership).
-        var teamQuery = new QueryExpression("role") { ColumnSet = new ColumnSet("roleid") };
+        // Via teams (role → teamroles → team → teammembership).
+        var teamQuery = new QueryExpression("role") { ColumnSet = new ColumnSet("name") };
         var trLink = teamQuery.AddLink("teamroles", "roleid", "roleid");
-        var memLink = trLink.AddLink("teammembership", "teamid", "teamid");
+        var teamLink = trLink.AddLink("team", "teamid", "teamid");
+        teamLink.Columns = new ColumnSet("name");
+        teamLink.EntityAlias = "tm";
+        var memLink = teamLink.AddLink("teammembership", "teamid", "teamid");
         memLink.LinkCriteria.AddCondition("systemuserid", ConditionOperator.Equal, userId);
         foreach (var e in (await client.RetrieveMultipleAsync(teamQuery, ct)).Entities)
-            ids.Add(e.Id);
+            Add(e.Id, e.GetAttributeValue<string>("name"),
+                e.GetAttributeValue<AliasedValue>("tm.name")?.Value as string ?? "Team");
 
-        return ids.ToList();
+        return roles;
     }
 
     private async Task EnsurePrivilegeMetadataAsync(ServiceClient client, CancellationToken ct)

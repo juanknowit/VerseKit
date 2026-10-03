@@ -222,7 +222,7 @@ public partial class ConnectionViewModel(
     private ConnectionProfile BuildProfile() => new()
     {
         Name = Name.Trim(),
-        EnvironmentUrl = EnvironmentUrl.TrimEnd('/'),
+        EnvironmentUrl = EnvironmentUrls.Normalize(EnvironmentUrl),
         ClientId = ClientId,
         TenantId = string.IsNullOrWhiteSpace(TenantId) ? null : TenantId,
         AuthMethod = SelectedAuthMethod,

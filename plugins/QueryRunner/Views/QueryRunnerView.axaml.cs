@@ -17,17 +17,25 @@ public partial class QueryRunnerView : UserControl
 
         DataContextChanged += (_, _) =>
         {
-            if (_vm is not null) _vm.ResultsReady -= RebuildColumns;
+            if (_vm is not null)
+            {
+                _vm.ResultsReady -= RebuildColumns;
+                _vm.QueryLoaded -= CloseQueriesPanel;
+            }
             if (DataContext is QueryRunnerViewModel vm)
             {
                 _vm = vm;
                 vm.PickSavePathAsync = PickSavePathAsync;
                 vm.ResultsReady += RebuildColumns;
+                vm.QueryLoaded += CloseQueriesPanel;
             }
         };
     }
 
     private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
+
+    /// <summary>Closes the Queries panel once a stored query is loaded into the editor.</summary>
+    private void CloseQueriesPanel() => this.FindControl<Button>("QueriesButton")?.Flyout?.Hide();
 
     /// <summary>Rebuilds the grid's columns to match the latest result set.</summary>
     private void RebuildColumns()

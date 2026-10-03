@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:VerseKit.App.ViewModels"
         xmlns:core="using:VerseKit.Core.Models"
+        xmlns:behaviors="using:VerseKit.App.Behaviors"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="820"
@@ -14,11 +15,18 @@
         TransparencyLevelHint="AcrylicBlur"
         Background="{DynamicResource WindowBackgroundBrush}"
         ExtendClientAreaToDecorationsHint="True"
-        ExtendClientAreaTitleBarHeightHint="-1">
+        ExtendClientAreaTitleBarHeightHint="-1"
+        Classes.ReduceMotion="{Binding ReduceMotion}">
 
     <Design.DataContext>
         <vm:MainWindowViewModel/>
     </Design.DataContext>
+
+    <!-- Esc closes the frontmost sheet. (⌘F → the active tool's search
+         field is handled in code-behind: it needs the visual tree.) -->
+    <Window.KeyBindings>
+        <KeyBinding Gesture="Escape" Command="{Binding CloseTopSheetCommand}"/>
+    </Window.KeyBindings>
 
     <Grid RowDefinitions="52,*">
 
@@ -51,7 +59,7 @@
                            Opacity="0.4"/>
 
                 <!-- Settings cog — red dot when an update is available -->
-                <Button Classes="IconBtn"
+                <Button Classes="IconBtn SettingsCog"
                         Command="{Binding ToggleSettingsPanelCommand}"
                         ToolTip.Tip="Settings">
                     <Panel>
@@ -334,7 +342,8 @@
                     <!-- Plugin workspace -->
                     <Panel>
                         <!-- Welcome screen -->
-                        <StackPanel IsVisible="{Binding ActivePluginView,
+                        <StackPanel Classes="Appear"
+                                    IsVisible="{Binding ActivePluginView,
                                         Converter={x:Static ObjectConverters.IsNull}}"
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center"
@@ -373,7 +382,9 @@
                         </StackPanel>
 
                         <!-- Active plugin view -->
-                        <ContentControl Content="{Binding ActivePluginView}"
+                        <ContentControl x:Name="Workspace"
+                                        Classes="Workspace"
+                                        Content="{Binding ActivePluginView}"
                                         IsVisible="{Binding ActivePluginView,
                                             Converter={x:Static ObjectConverters.IsNotNull}}"
                                         HorizontalContentAlignment="Stretch"
@@ -382,11 +393,15 @@
                 </Border>
 
                 <!-- ── Connection form overlay ─────────────────────────
-                     Full-area dim + modal card, sits above the white card -->
-                <Panel IsVisible="{Binding IsConnectionPanelVisible}" ZIndex="50">
+                     Modal sheet above the white card. Grows from the
+                     sidebar (top-left), where it was opened. -->
+                <Panel Classes="SheetOverlay"
+                       behaviors:Sheet.IsOpen="{Binding IsConnectionPanelVisible}"
+                       ZIndex="50">
 
                     <!-- Form card — light/white macOS sheet style -->
                     <Border Classes="FormCard"
+                            RenderTransformOrigin="0%,0%"
                             Width="540"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
@@ -399,9 +414,8 @@
                             <!-- Header row -->
                             <DockPanel>
                                 <Button DockPanel.Dock="Right"
+                                        Classes="IconBtn"
                                         Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).ToggleConnectionPanelCommand}"
-                                        Background="Transparent"
-                                        BorderThickness="0"
                                         Padding="6"
                                         ToolTip.Tip="Cancel">
                                     <TextBlock Text="✕" FontSize="14" Foreground="#8E8E93"/>
@@ -409,6 +423,7 @@
                                 <TextBlock Text="{Binding FormTitle}"
                                            FontSize="17"
                                            FontWeight="SemiBold"
+                                           LetterSpacing="-0.4"
                                            Foreground="#1C1C1E"
                                            VerticalAlignment="Center"/>
                             </DockPanel>
@@ -544,9 +559,11 @@
                 </Panel>
 
                 <!-- ── Settings overlay ────────────────────────────────
-                     Dim backdrop + modal sheet, same pattern as the
-                     connection form. -->
-                <Panel IsVisible="{Binding IsSettingsPanelVisible}" ZIndex="60">
+                     Modal sheet. Grows from the Settings cog (top-right,
+                     the FormCard default origin). -->
+                <Panel Classes="SheetOverlay"
+                       behaviors:Sheet.IsOpen="{Binding IsSettingsPanelVisible}"
+                       ZIndex="60">
 
                     <Border Classes="FormCard"
                             Width="420"
@@ -560,6 +577,7 @@
                                            Text="Settings"
                                            FontSize="17"
                                            FontWeight="SemiBold"
+                                           LetterSpacing="-0.4"
                                            Foreground="#1C1C1E"
                                            VerticalAlignment="Center"/>
                                 <Button Grid.Column="1"
@@ -577,6 +595,7 @@
                                         HorizontalAlignment="Center">
                                 <TextBlock Text="VerseKit"
                                            FontSize="16" FontWeight="SemiBold"
+                                           LetterSpacing="-0.3"
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="A macOS toolkit for Microsoft Dataverse administrators."
                                            FontSize="12" Foreground="#6E6E73"
@@ -619,7 +638,8 @@
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="vm:AccentSwatchItem">
-                                            <Button Width="30" Height="30"
+                                            <Button Classes="Swatch"
+                                                    Width="30" Height="30"
                                                     Padding="0"
                                                     CornerRadius="15"
                                                     Background="Transparent"
@@ -630,10 +650,11 @@
                                                     CommandParameter="{Binding Id}">
                                                 <Panel Width="30" Height="30">
                                                     <!-- Ring shown around the active preset -->
-                                                    <Ellipse Width="28" Height="28"
+                                                    <Ellipse Classes="SwatchRing"
+                                                             Classes.selected="{Binding IsSelected}"
+                                                             Width="28" Height="28"
                                                              Stroke="{Binding SwatchBrush}"
-                                                             StrokeThickness="2"
-                                                             IsVisible="{Binding IsSelected}"/>
+                                                             StrokeThickness="2"/>
                                                     <Ellipse Width="20" Height="20"
                                                              Fill="{Binding SwatchBrush}"/>
                                                 </Panel>
@@ -669,6 +690,14 @@
                                                 <Setter Property="FontWeight" Value="Medium"/>
                                                 <Setter Property="Foreground" Value="#3C3C43"/>
                                                 <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                            </Style>
+                                            <!-- Selection capsule eases between states -->
+                                            <Style Selector="Button.seg /template/ ContentPresenter">
+                                                <Setter Property="Transitions">
+                                                    <Transitions>
+                                                        <BrushTransition Property="Background" Duration="0:0:0.15" Easing="CubicEaseOut"/>
+                                                    </Transitions>
+                                                </Setter>
                                             </Style>
                                             <Style Selector="Button.seg:pointerover /template/ ContentPresenter">
                                                 <Setter Property="Background" Value="#0F000000"/>
@@ -734,10 +763,14 @@
                 </Panel>
 
                 <!-- ── Plugins manager overlay ─────────────────────────
-                     Dim-less modal sheet, same pattern as Settings. -->
-                <Panel IsVisible="{Binding IsPluginsPanelVisible}" ZIndex="70">
+                     Dim-less modal sheet, same pattern as Settings. Grows
+                     from the sidebar's TOOLS › Manage button (left). -->
+                <Panel Classes="SheetOverlay"
+                       behaviors:Sheet.IsOpen="{Binding IsPluginsPanelVisible}"
+                       ZIndex="70">
 
                     <Border Classes="FormCard"
+                            RenderTransformOrigin="0%,50%"
                             Width="560" MaxHeight="640"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center">
@@ -747,6 +780,7 @@
                             <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
                                 <TextBlock Grid.Column="0" Text="Plugins"
                                            FontSize="17" FontWeight="SemiBold"
+                                           LetterSpacing="-0.4"
                                            Foreground="#1C1C1E" VerticalAlignment="Center"/>
                                 <Button Grid.Column="1" Classes="IconBtn"
                                         Command="{Binding TogglePluginsPanelCommand}"
@@ -773,7 +807,7 @@
                             <TextBlock DockPanel.Dock="Top"
                                        Text="Plugins run in-process with full access to your environments. Only install plugins you trust."
                                        FontSize="11.5" Foreground="#8E8E93"
-                                       TextWrapping="Wrap" Margin="0,0,0,10"/>
+                                       TextWrapping="Wrap" Margin="0,0,0,18"/>
 
                             <!-- Status -->
                             <Border DockPanel.Dock="Top"
@@ -783,12 +817,19 @@
                                            Foreground="#3C3C43" TextWrapping="Wrap"/>
                             </Border>
 
-                            <!-- Installed + available, scrolled together -->
-                            <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-                                <StackPanel Spacing="8">
+                            <!-- Installed + available, scrolled together. The scroll area
+                                 reaches 20px into the sheet's right padding and the content
+                                 is inset by the same amount, so the (overlay) scrollbar runs
+                                 in that gutter instead of over the cards and switches. -->
+                            <ScrollViewer HorizontalScrollBarVisibility="Disabled" Margin="0,0,-20,0">
+                                <StackPanel Spacing="8" Margin="0,0,20,0">
 
-                                    <TextBlock Text="INSTALLED" FontSize="11" FontWeight="SemiBold"
-                                               Foreground="#6E6E73" LetterSpacing="0.6" Margin="2,0,0,2"/>
+                                    <DockPanel Margin="2,0,0,2">
+                                        <TextBlock DockPanel.Dock="Right" Text="Turn a tool off to uninstall it"
+                                                   FontSize="11" Foreground="#AEAEB2" VerticalAlignment="Center"/>
+                                        <TextBlock Text="INSTALLED" FontSize="11" FontWeight="SemiBold"
+                                                   Foreground="#6E6E73" LetterSpacing="0.6"/>
+                                    </DockPanel>
 
                                     <ItemsControl ItemsSource="{Binding PluginItems}">
                                     <ItemsControl.ItemTemplate>
@@ -808,20 +849,25 @@
                                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                     </Border>
 
-                                                    <!-- Enable toggle (far right) -->
+                                                    <!-- Install switch (far right): off = uninstall;
+                                                         the tool then moves to Available. -->
                                                     <ToggleSwitch DockPanel.Dock="Right"
                                                                   OnContent="" OffContent=""
                                                                   MinWidth="0"
                                                                   VerticalAlignment="Center"
-                                                                  IsChecked="{Binding IsEnabled, Mode=TwoWay}"/>
+                                                                  IsChecked="{Binding IsOn, Mode=TwoWay}"
+                                                                  IsEnabled="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).CanChangePlugins}"
+                                                                  ToolTip.Tip="Turn off to uninstall"/>
 
-                                                    <!-- Remove (installed only) -->
+                                                    <!-- Newer version in the registry -->
                                                     <Button DockPanel.Dock="Right"
-                                                            Classes="Danger" Content="Remove"
-                                                            Margin="0,0,10,0" VerticalAlignment="Center"
-                                                            IsVisible="{Binding IsRemovable}"
-                                                            Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).RemovePluginCommand}"
-                                                            CommandParameter="{Binding}"/>
+                                                            Content="{Binding UpdateLabel}"
+                                                            IsVisible="{Binding HasUpdate}"
+                                                            Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).UpdatePluginCommand}"
+                                                            CommandParameter="{Binding}"
+                                                            FontSize="12" Padding="10,4" Margin="0,0,10,0"
+                                                            VerticalAlignment="Center"/>
+
 
                                                     <!-- Name / version / origin / description -->
                                                     <StackPanel VerticalAlignment="Center" Spacing="2">
@@ -852,8 +898,12 @@
                                     </ItemsControl.ItemTemplate>
                                     </ItemsControl>
 
-                                    <TextBlock Text="AVAILABLE" FontSize="11" FontWeight="SemiBold"
-                                               Foreground="#6E6E73" LetterSpacing="0.6" Margin="2,8,0,2"/>
+                                    <DockPanel Margin="2,8,0,2">
+                                        <TextBlock DockPanel.Dock="Right" Text="Turn a tool on to install it"
+                                                   FontSize="11" Foreground="#AEAEB2" VerticalAlignment="Center"/>
+                                        <TextBlock Text="AVAILABLE" FontSize="11" FontWeight="SemiBold"
+                                                   Foreground="#6E6E73" LetterSpacing="0.6"/>
+                                    </DockPanel>
 
                                     <TextBlock Text="Loading…" FontSize="12" Foreground="#8E8E93" Margin="2,0,0,0"
                                                IsVisible="{Binding IsCatalogLoading}"/>
@@ -879,13 +929,23 @@
                                                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                         </Border>
 
-                                                        <!-- Install / Update / Installed -->
-                                                        <Button DockPanel.Dock="Right" Classes="Primary"
-                                                                Content="{Binding ActionLabel}"
-                                                                MinWidth="86" VerticalAlignment="Center"
-                                                                IsEnabled="{Binding CanInstall}"
-                                                                Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).InstallFromCatalogCommand}"
-                                                                CommandParameter="{Binding}"/>
+                                                        <!-- Install switch: on = install (downloaded from
+                                                             the GitHub release, or restored if built-in) -->
+                                                        <ToggleSwitch DockPanel.Dock="Right"
+                                                                      OnContent="" OffContent=""
+                                                                      MinWidth="0"
+                                                                      VerticalAlignment="Center"
+                                                                      IsChecked="{Binding IsOn, Mode=TwoWay}"
+                                                                      IsEnabled="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).CanChangePlugins}"
+                                                                      ToolTip.Tip="Turn on to install"/>
+                                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6"
+                                                                    Margin="0,0,10,0" VerticalAlignment="Center"
+                                                                    IsVisible="{Binding IsBusy}">
+                                                            <ProgressBar IsIndeterminate="True" Width="40" MinWidth="0" Height="3"
+                                                                         VerticalAlignment="Center"/>
+                                                            <TextBlock Text="Installing…" FontSize="11" Foreground="#8E8E93"
+                                                                       VerticalAlignment="Center"/>
+                                                        </StackPanel>
 
                                                         <!-- Name / version / author / description -->
                                                         <StackPanel VerticalAlignment="Center" Spacing="2">
@@ -902,6 +962,10 @@
                                                                            Foreground="#8E8E93" VerticalAlignment="Center"/>
                                                                 <TextBlock Text="{Binding Author}" FontSize="10.5"
                                                                            Foreground="#AEAEB2" VerticalAlignment="Center"/>
+                                                                <Border Background="#EEEEF2" CornerRadius="6" Padding="6,1"
+                                                                        VerticalAlignment="Center" IsVisible="{Binding IsBuiltIn}">
+                                                                    <TextBlock Text="Bundled" FontSize="10" Foreground="#6E6E73"/>
+                                                                </Border>
                                                             </StackPanel>
                                                             <TextBlock Text="{Binding Description}" FontSize="11.5"
                                                                        Foreground="#8E8E93"

@@ -44,11 +44,31 @@ public sealed partial class SecurityRolesViewModel : ObservableObject
     [ObservableProperty] private string _privilegesStatus = string.Empty;
     [ObservableProperty] private bool _showOnlyAssigned = true;
 
-    /// <summary>0 = Members, 1 = Table permissions.</summary>
+    /// <summary>0 = Members, 1 = Table permissions, 2 = Compare.</summary>
     [ObservableProperty] private int _detailTabIndex;
 
+    // ── Compare two roles ──────────────────────────────────────────────
+    private Dictionary<Guid, PrivilegeDepth> _roleMapA = new();
+    private List<RoleComparisonRow> _allComparisonRows = [];
+
+    public ObservableCollection<RoleItem> CompareCandidates { get; } = [];
+    public ObservableCollection<RoleComparisonRow> Comparisons { get; } = [];
+
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsRoleSelected))]
+    [NotifyPropertyChangedFor(nameof(CompareRoleName))]
+    private RoleItem? _compareRole;
+
+    [ObservableProperty] private bool _isCompareLoading;
+    [ObservableProperty] private string _compareFilterText = string.Empty;
+    [ObservableProperty] private string _compareStatus = string.Empty;
+    [ObservableProperty] private bool _showOnlyDifferences = true;
+    [ObservableProperty] private bool _hasDifferences;
+
+    public string SelectedRoleName => SelectedRole?.Title ?? "Role A";
+    public string CompareRoleName => CompareRole?.Title ?? "Role B";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsRoleSelected), nameof(SelectedRoleName))]
     private RoleItem? _selectedRole;
 
     public bool IsRoleSelected => SelectedRole is not null;
@@ -82,20 +102,9 @@ public sealed partial class SecurityRolesViewModel : ObservableObject
             }));
     }
 
-    private CancellationTokenSource? _filterDebounce;
-
-    partial void OnFilterTextChanged(string value)
-    {
-        _filterDebounce?.Cancel();
-        var cts = _filterDebounce = new CancellationTokenSource();
-        _ = DebouncedFilterAsync(cts.Token);
-    }
-
-    private async Task DebouncedFilterAsync(CancellationToken ct)
-    {
-        try { await Task.Delay(200, ct); ApplyFilter(); }
-        catch (OperationCanceledException) { }
-    }
+    // Filter on every keystroke — local and cheap, and instant feedback
+    // matters more than saving work (DESIGN.md §7, "respond immediately").
+    partial void OnFilterTextChanged(string value) => ApplyFilter();
 
     private void ApplyFilter()
     {
@@ -175,6 +184,17 @@ public sealed partial class SecurityRolesViewModel : ObservableObject
         _privilegesLoadedForRole = null;
         PrivilegeFilterText = string.Empty;
         PrivilegesStatus = string.Empty;
+        _roleMapA = new();
+
+        // Reset the comparison whenever the primary role changes.
+        CompareRole = null;
+        Comparisons.Clear();
+        _allComparisonRows = [];
+        CompareStatus = string.Empty;
+        HasDifferences = false;
+        CompareCandidates.Clear();
+        foreach (var r in _allRoles.Where(r => r.RoleId != value?.RoleId))
+            CompareCandidates.Add(r);
 
         if (value is not null)
         {
@@ -293,25 +313,12 @@ public sealed partial class SecurityRolesViewModel : ObservableObject
             var client = await _connectionProvider.GetActiveConnectionAsync(ct);
             await EnsurePrivilegeMetadataAsync(client, ct);
 
-            var response = (RetrieveRolePrivilegesRoleResponse)await client.ExecuteAsync(
-                new RetrieveRolePrivilegesRoleRequest { RoleId = role.RoleId }, ct);
-
-            var roleMap = new Dictionary<Guid, PrivilegeDepth>();
-            foreach (var rp in response.RolePrivileges)
-                roleMap[rp.PrivilegeId] = rp.Depth;
+            var roleMap = await GetRoleMapAsync(client, role.RoleId, ct);
 
             var rows = new List<RolePrivilegeRow>(_entityPrivMeta.Count);
             foreach (var em in _entityPrivMeta)
             {
-                var supported = new Dictionary<PrivilegeType, PrivilegeDepth?>();
-                foreach (var (id, type) in em.Privileges)
-                {
-                    var depth = roleMap.TryGetValue(id, out var d) ? (PrivilegeDepth?)d : null;
-                    // Keep a granted depth over an ungranted one if a type recurs.
-                    if (!supported.TryGetValue(type, out var existing) || existing is null)
-                        supported[type] = depth;
-                }
-
+                var supported = SupportedFor(em, roleMap);
                 rows.Add(new RolePrivilegeRow
                 {
                     Table = em.Table,
@@ -334,6 +341,7 @@ public sealed partial class SecurityRolesViewModel : ObservableObject
             {
                 _allPrivilegeRows = rows;
                 _privilegesLoadedForRole = role.RoleId;
+                _roleMapA = roleMap;
                 ApplyPrivilegeFilter();
             });
         }
@@ -406,8 +414,163 @@ public sealed partial class SecurityRolesViewModel : ObservableObject
 
     /// <summary>Exports whichever detail tab is currently open.</summary>
     [RelayCommand]
-    private Task ExportAsync() =>
-        DetailTabIndex == 1 ? ExportPrivilegesAsync() : ExportMembersAsync();
+    private Task ExportAsync() => DetailTabIndex switch
+    {
+        1 => ExportPrivilegesAsync(),
+        2 => ExportComparisonAsync(),
+        _ => ExportMembersAsync(),
+    };
+
+    private async Task ExportComparisonAsync()
+    {
+        if (SelectedRole is not { } roleA || PickSavePathAsync is null) return;
+        if (CompareRole is not { } roleB) { CompareStatus = "Pick a role to compare with first."; return; }
+        if (Comparisons.Count == 0) { CompareStatus = "Nothing to export."; return; }
+
+        var path = await PickSavePathAsync(SafeFileName($"{roleA.Title} vs {roleB.Title}") + ".xlsx");
+        if (string.IsNullOrEmpty(path)) return;
+
+        var snapshot = Comparisons.ToList(); // what's shown (respects the filters)
+        try
+        {
+            await Task.Run(() => RoleExcelExporter.ExportComparison(path, roleA, roleB, snapshot));
+            CompareStatus = $"Exported {snapshot.Count} row(s) to {Path.GetFileName(path)}";
+        }
+        catch (Exception ex)
+        {
+            CompareStatus = $"Export failed: {ex.Message}";
+        }
+    }
+
+    // ── Compare two roles ──────────────────────────────────────────────
+
+    private static readonly (PrivilegeType Type, string Label)[] PrivOrder =
+    [
+        (PrivilegeType.Create, "Create"), (PrivilegeType.Read, "Read"),
+        (PrivilegeType.Write, "Write"), (PrivilegeType.Delete, "Delete"),
+        (PrivilegeType.Append, "Append"), (PrivilegeType.AppendTo, "Append To"),
+        (PrivilegeType.Assign, "Assign"), (PrivilegeType.Share, "Share"),
+    ];
+
+    partial void OnCompareRoleChanged(RoleItem? value)
+    {
+        Comparisons.Clear();
+        _allComparisonRows = [];
+        HasDifferences = false;
+        CompareStatus = string.Empty;
+        if (value is not null && SelectedRole is { } roleA)
+            _ = LoadCompareAsync(roleA, value, CancellationToken.None);
+    }
+
+    partial void OnCompareFilterTextChanged(string value) => ApplyCompareFilter();
+    partial void OnShowOnlyDifferencesChanged(bool value) => ApplyCompareFilter();
+
+    private async Task LoadCompareAsync(RoleItem roleA, RoleItem roleB, CancellationToken ct)
+    {
+        IsCompareLoading = true;
+        CompareStatus = $"Comparing with {roleB.Title}…";
+        try
+        {
+            var client = await _connectionProvider.GetActiveConnectionAsync(ct);
+            await EnsurePrivilegeMetadataAsync(client, ct);
+
+            // Reuse role A's map when the Table permissions tab already loaded it.
+            var mapA = _privilegesLoadedForRole == roleA.RoleId && _roleMapA.Count > 0
+                ? _roleMapA
+                : await GetRoleMapAsync(client, roleA.RoleId, ct);
+            var mapB = await GetRoleMapAsync(client, roleB.RoleId, ct);
+            var rows = BuildComparisonRows(mapA, mapB);
+
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (SelectedRole != roleA || CompareRole != roleB) return; // superseded
+                _allComparisonRows = rows;
+                ApplyCompareFilter();
+            });
+        }
+        catch (Exception ex)
+        {
+            Dispatcher.UIThread.Post(() => CompareStatus = $"Error comparing: {ex.Message}");
+        }
+        finally
+        {
+            Dispatcher.UIThread.Post(() => IsCompareLoading = false);
+        }
+    }
+
+    private List<RoleComparisonRow> BuildComparisonRows(
+        Dictionary<Guid, PrivilegeDepth> mapA, Dictionary<Guid, PrivilegeDepth> mapB)
+    {
+        var rows = new List<RoleComparisonRow>();
+        foreach (var em in _entityPrivMeta)
+        {
+            var sa = SupportedFor(em, mapA);
+            var sb = SupportedFor(em, mapB);
+            foreach (var (type, label) in PrivOrder)
+            {
+                if (!sa.ContainsKey(type)) continue; // table doesn't support this privilege
+                var cellA = BuildCell(sa, type);
+                var cellB = BuildCell(sb, type);
+                rows.Add(new RoleComparisonRow
+                {
+                    Table = em.Table,
+                    LogicalName = em.LogicalName,
+                    Privilege = label,
+                    CellA = cellA,
+                    CellB = cellB,
+                    Differs = cellA.Short != cellB.Short,
+                });
+            }
+        }
+        return rows
+            .OrderBy(r => r.Title, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(r => Array.FindIndex(PrivOrder, p => p.Label == r.Privilege))
+            .ToList();
+    }
+
+    private void ApplyCompareFilter()
+    {
+        var f = CompareFilterText?.Trim() ?? string.Empty;
+        Comparisons.Clear();
+        foreach (var r in _allComparisonRows.Where(r => (!ShowOnlyDifferences || r.Differs)
+                     && (f.Length == 0 || r.Table.Contains(f, OIC) || r.LogicalName.Contains(f, OIC))))
+            Comparisons.Add(r);
+
+        if (CompareRole is null) { CompareStatus = string.Empty; HasDifferences = false; return; }
+        var diffRows = _allComparisonRows.Where(r => r.Differs).ToList();
+        HasDifferences = diffRows.Count > 0;
+        CompareStatus = diffRows.Count == 0
+            ? "Identical table permissions — no differences."
+            : $"{diffRows.Count} difference(s) across {diffRows.Select(r => r.LogicalName).Distinct().Count()} table(s)";
+    }
+
+    /// <summary>A role's privileges: privilege id → depth.</summary>
+    private static async Task<Dictionary<Guid, PrivilegeDepth>> GetRoleMapAsync(
+        ServiceClient client, Guid roleId, CancellationToken ct)
+    {
+        var response = (RetrieveRolePrivilegesRoleResponse)await client.ExecuteAsync(
+            new RetrieveRolePrivilegesRoleRequest { RoleId = roleId }, ct);
+        var map = new Dictionary<Guid, PrivilegeDepth>();
+        foreach (var rp in response.RolePrivileges)
+            map[rp.PrivilegeId] = rp.Depth;
+        return map;
+    }
+
+    /// <summary>The depth granted per privilege type on a table (null = supported
+    /// but not granted; absent = the table lacks that privilege).</summary>
+    private static Dictionary<PrivilegeType, PrivilegeDepth?> SupportedFor(
+        EntityPrivMeta em, Dictionary<Guid, PrivilegeDepth> map)
+    {
+        var supported = new Dictionary<PrivilegeType, PrivilegeDepth?>();
+        foreach (var (id, type) in em.Privileges)
+        {
+            var depth = map.TryGetValue(id, out var d) ? (PrivilegeDepth?)d : null;
+            // Keep a granted depth over an ungranted one if a type recurs.
+            if (!supported.TryGetValue(type, out var existing) || existing is null)
+                supported[type] = depth;
+        }
+        return supported;
+    }
 
     [RelayCommand]
     private async Task ExportMembersAsync()

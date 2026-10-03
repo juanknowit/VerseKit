@@ -25,4 +25,8 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="VerseKit.Tests" />
+  </ItemGroup>
+
 </Project>

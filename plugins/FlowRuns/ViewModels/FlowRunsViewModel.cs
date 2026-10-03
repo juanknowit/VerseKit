@@ -1,9 +1,11 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Text;
 using Avalonia.Threading;
 using ClosedXML.Excel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Crm.Sdk.Messages;
 using Microsoft.PowerPlatform.Dataverse.Client;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
@@ -64,10 +66,46 @@ public sealed partial class FlowRunsViewModel : ObservableObject
     [ObservableProperty] private bool _selectAll;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsDetailOpen))]
+    [NotifyPropertyChangedFor(nameof(PowerAutomateUrl), nameof(PowerAutomateUnavailableReason))]
+    [NotifyCanExecuteChangedFor(nameof(OpenInPowerAutomateCommand))]
     private FlowRunItem? _selectedRun;
 
-    public bool IsDetailOpen => SelectedRun is not null;
+    // ── Power Automate link ─────────────────────────────────────────
+    // The portal identifies flows by the workflow's "workflowidunique", not its
+    // row id (per PnP's "Dissecting Power Automate Flows"; Microsoft documents
+    // the column only as internal). If links ever open the wrong flow, this
+    // mapping is the one place to change.
+    private string? _environmentId;
+    private Dictionary<Guid, Guid> _portalFlowIds = new();
+
+    /// <summary>make.powerautomate.com link to the selected run, or null when an id is missing.</summary>
+    public string? PowerAutomateUrl =>
+        SelectedRun is { WorkflowId: { } wf, RunId.Length: > 0 } run
+        && _environmentId is { Length: > 0 } env
+        && _portalFlowIds.TryGetValue(wf, out var flowId)
+            ? $"https://make.powerautomate.com/environments/{env}/flows/{flowId}/runs/{run.RunId}"
+            : null;
+
+    public string PowerAutomateUnavailableReason => PowerAutomateUrl is not null
+        ? "Open this run in Power Automate in your browser"
+        : _environmentId is null
+            ? "The environment's Power Platform id couldn't be read"
+            : "This run's flow couldn't be matched to a Power Automate flow";
+
+    [RelayCommand(CanExecute = nameof(CanOpenInPowerAutomate))]
+    private void OpenInPowerAutomate()
+    {
+        if (PowerAutomateUrl is { } url)
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+    }
+
+    private bool CanOpenInPowerAutomate() => PowerAutomateUrl is not null;
+
+    /// <summary>Detail drawer state. Kept separate from SelectedRun so the
+    /// drawer still shows the run while it animates closed.</summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CloseDetailCommand))]
+    private bool _isDetailOpen;
     public bool HasResults => RunCount > 0;
     public bool ShowConnectPrompt => !IsConnected;
     public bool ShowNotEnabled => IsConnected && !IsFeatureEnabled;
@@ -92,7 +130,7 @@ public sealed partial class FlowRunsViewModel : ObservableObject
                     _allRuns = [];
                     Runs.Clear();
                     Flows.Clear();
-                    SelectedRun = null;
+                    IsDetailOpen = false;
                     SelectAll = false;
                     RunCount = 0;
                     Summary = "";
@@ -124,6 +162,7 @@ public sealed partial class FlowRunsViewModel : ObservableObject
                 return;
             }
 
+            await LoadEnvironmentIdAsync(client, ct);
             await LoadFlowsAsync(client, ct);
             await ReloadRunsAsync(ct);
         }
@@ -158,22 +197,44 @@ public sealed partial class FlowRunsViewModel : ObservableObject
         }
     }
 
+    /// <summary>The Power Platform environment id (≠ the Dataverse org id), for portal links.</summary>
+    private async Task LoadEnvironmentIdAsync(ServiceClient client, CancellationToken ct)
+    {
+        try
+        {
+            var resp = (RetrieveCurrentOrganizationResponse)await client.ExecuteAsync(
+                new RetrieveCurrentOrganizationRequest(), ct);
+            var env = resp.Detail?.EnvironmentId;
+            Dispatcher.UIThread.Post(() =>
+            {
+                _environmentId = string.IsNullOrWhiteSpace(env) ? null : env;
+                OnPropertyChanged(nameof(PowerAutomateUrl));
+                OnPropertyChanged(nameof(PowerAutomateUnavailableReason));
+                OpenInPowerAutomateCommand.NotifyCanExecuteChanged();
+            });
+        }
+        catch { /* non-fatal: only the "Open in Power Automate" link is unavailable */ }
+    }
+
     private async Task LoadFlowsAsync(ServiceClient client, CancellationToken ct)
     {
         // Modern cloud flows: workflow category = 5, type = 1 (definition).
         var q = new QueryExpression("workflow")
         {
-            ColumnSet = new ColumnSet("workflowid", "name")
+            ColumnSet = new ColumnSet("workflowid", "name", "workflowidunique")
         };
         q.Criteria.AddCondition("category", ConditionOperator.Equal, 5);
         q.Criteria.AddCondition("type", ConditionOperator.Equal, 1);
         q.AddOrder("name", OrderType.Ascending);
 
         var flows = new List<FlowOption>();
+        var portalIds = new Dictionary<Guid, Guid>();
         try
         {
             foreach (var e in (await client.RetrieveMultipleAsync(q, ct)).Entities)
             {
+                if (e.GetAttributeValue<Guid?>("workflowidunique") is { } unique)
+                    portalIds[e.Id] = unique;
                 flows.Add(new FlowOption
                 {
                     Id = e.Id,
@@ -185,6 +246,7 @@ public sealed partial class FlowRunsViewModel : ObservableObject
 
         Dispatcher.UIThread.Post(() =>
         {
+            _portalFlowIds = portalIds;
             Flows.Clear();
             Flows.Add(new FlowOption { Id = null, Name = "All flows" });
             foreach (var f in flows) Flows.Add(f);
@@ -288,6 +350,7 @@ public sealed partial class FlowRunsViewModel : ObservableObject
             return new FlowRunItem
             {
                 FlowName = string.IsNullOrEmpty(name) ? "(unknown flow)" : name!,
+                WorkflowId = wf?.Id,
                 Status = e.GetAttributeValue<string>("status") ?? "",
                 Owner = e.GetAttributeValue<EntityReference>("ownerid")?.Name ?? "",
                 RunId = e.GetAttributeValue<string>("name") ?? "",
@@ -326,15 +389,18 @@ public sealed partial class FlowRunsViewModel : ObservableObject
     [RelayCommand]
     private void Inspect(FlowRunItem? run)
     {
-        if (run is not null) SelectedRun = run;
+        if (run is null) return;
+        SelectedRun = run;
+        IsDetailOpen = true;
     }
 
-    [RelayCommand]
-    private void CloseDetail() => SelectedRun = null;
+    // CanExecute lets Esc fall through to the host when the drawer is closed.
+    [RelayCommand(CanExecute = nameof(IsDetailOpen))]
+    private void CloseDetail() => IsDetailOpen = false;
 
     private void ApplyStatusFilter()
     {
-        SelectedRun = null;
+        IsDetailOpen = false;
         var status = SelectedStatus;
         var filtered = status == "All statuses"
             ? _allRuns

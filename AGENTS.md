@@ -65,6 +65,13 @@ theming lives in `src/VerseKit.App/App.axaml` and is inherited by plugins —
 extend the shared styles, don't redefine per-view. Keep new UI consistent with the
 DESIGN.md checklist.
 
+Motion follows Apple's fluid-interface principles (DESIGN.md §7): instant
+press feedback, interruptible critically-damped springs, exits that retrace their
+entry, and macOS *Reduce Motion* respected. Modal overlays use
+`Panel.SheetOverlay` + `behaviors:Sheet.IsOpen` — never a bare `IsVisible`
+toggle. Plugins must still work on older hosts, so anything a plugin's layout
+depends on must be self-contained in the plugin.
+
 ## Coding Conventions
 
 - **MVVM pattern** for all Avalonia views. ViewModels in `ViewModels/`, Views in `Views/`.
@@ -118,12 +125,16 @@ into the app so it ships built-in on a fresh download. Decide per plugin:
 | | Bundled + registry | Registry-only |
 |---|---|---|
 | Ships in the `.app` on install | Yes | No |
-| Appears in Manage | As **Installed (Bundled)**, no Remove | Under **Available** until installed |
+| Appears in Manage | **Installed (Bundled)**; switching it off hides it and moves it to Available | Under **Available** until switched on |
 | Use for | Stable, core tools | New / experimental / niche tools |
 
 **To add a plugin, edit single lists:**
 - **Registry (always):** add a build step to `.github/workflows/plugins.yml`, an entry to `registry/plugins.json` (id, version, `downloadUrl` → the `plugins-vN` release, `sha256`), and the project to `VerseKit.slnx`.
 - **Bundle (only if it's a standard core tool):** also add it to the plugin list in `.github/workflows/release.yml` (build + both stage steps).
+
+In Manage, a tool's switch is its install state: off uninstalls (deletes a
+user-installed copy; records a bundled one as switched off), on installs from
+the registry's GitHub release (or restores the bundled copy). See DESIGN.md §5.
 
 Mark a not-yet-stable plugin with `"beta": true` in `registry/plugins.json` — the
 Manage list shows a **BETA** badge. New tools should default to **registry-only**

@@ -2,12 +2,99 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:FlowRuns.ViewModels"
              xmlns:models="using:FlowRuns.Models"
+             xmlns:behaviors="using:FlowRuns.Behaviors"
+             xmlns:local="using:FlowRuns.Views"
              x:Class="FlowRuns.Views.FlowRunsView"
              x:Name="Root"
              x:DataType="vm:FlowRunsViewModel">
 
+    <UserControl.Resources>
+        <!-- The Fluent column header always reserves 32px for a sort arrow,
+             which squeezed the 46px select-all column's checkbox to zero
+             width. Reserve nothing; the arrow takes room only when shown. -->
+        <x:Double x:Key="DataGridSortIconMinWidth">0</x:Double>
+    </UserControl.Resources>
+
+    <UserControl.KeyBindings>
+        <KeyBinding Gesture="Escape" Command="{Binding CloseDetailCommand}"/>
+    </UserControl.KeyBindings>
+
     <UserControl.Styles>
         <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
+        <!-- ══ Table look for DataGrid ════════════════════════════════
+             Restyles the stock Fluent DataGrid to match the tools' list
+             styles (DESIGN.md §5 "Data tables"): compact 12pt rows,
+             hairline separators, a quiet header, hover wash and a pale
+             accent selection with dark text (the Fluent default fills the
+             selected row with the saturated accent). Local to the plugin
+             so it applies on any host version. -->
+        <Style Selector="DataGrid.Table">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="#1C1C1E"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="RowHeight" Value="30"/>
+            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="#EFEFF2"/>
+        </Style>
+        <Style Selector="DataGrid.Table /template/ Rectangle#PART_ColumnHeadersAndRowsSeparator">
+            <Setter Property="Fill" Value="#E5E5EA"/>
+        </Style>
+        <Style Selector="DataGrid.Table DataGridColumnHeader">
+            <Setter Property="Background" Value="#FAFAFB"/>
+            <Setter Property="Foreground" Value="#6E6E73"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="MinHeight" Value="28"/>
+            <Setter Property="Padding" Value="12,0,0,0"/>
+            <Setter Property="SeparatorBrush" Value="#E5E5EA"/>
+        </Style>
+        <Style Selector="DataGrid.Table DataGridColumnHeader:pointerover /template/ Grid#PART_ColumnHeaderRoot">
+            <Setter Property="Background" Value="#F2F2F5"/>
+        </Style>
+        <Style Selector="DataGrid.Table DataGridColumnHeader:pressed /template/ Grid#PART_ColumnHeaderRoot">
+            <Setter Property="Background" Value="#EAEAEE"/>
+        </Style>
+        <Style Selector="DataGrid.Table DataGridCell">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="MinHeight" Value="30"/>
+        </Style>
+        <!-- No black focus/currency box around the clicked cell -->
+        <Style Selector="DataGrid.Table DataGridCell /template/ Grid#FocusVisual, DataGrid.Table DataGridCell /template/ Rectangle#CurrencyVisual">
+            <Setter Property="IsVisible" Value="False"/>
+        </Style>
+        <Style Selector="DataGrid.Table DataGridRow:pointerover /template/ Rectangle#BackgroundRectangle">
+            <Setter Property="Fill" Value="#0A000000"/>
+            <Setter Property="Opacity" Value="1"/>
+        </Style>
+        <Style Selector="DataGrid.Table DataGridRow:selected /template/ Rectangle#BackgroundRectangle">
+            <Setter Property="Fill" Value="{DynamicResource TintBrush}"/>
+            <Setter Property="Opacity" Value="1"/>
+        </Style>
+        <Style Selector="DataGrid.Table DataGridRow:selected:pointerover /template/ Rectangle#BackgroundRectangle">
+            <Setter Property="Fill" Value="{DynamicResource TintHoverBrush}"/>
+        </Style>
+        <!-- Lighter, slightly smaller checkboxes (the stock box is a heavy
+             20px square). Scaled rather than resized so the glyph stays
+             centred; checked keeps the theme's accent fill. -->
+        <Style Selector="DataGrid.Table CheckBox">
+            <Setter Property="CornerRadius" Value="5"/>
+            <Setter Property="RenderTransform" Value="scale(0.85)"/>
+        </Style>
+        <Style Selector="DataGrid.Table CheckBox:unchecked /template/ Border#NormalRectangle">
+            <Setter Property="BorderBrush" Value="#C7C7CC"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="White"/>
+        </Style>
+        <Style Selector="DataGrid.Table CheckBox:unchecked:pointerover /template/ Border#NormalRectangle">
+            <Setter Property="BorderBrush" Value="#8E8E93"/>
+        </Style>
+        <!-- Row "Details ›" stays quiet until its row is hovered or selected -->
+        <Style Selector="DataGrid.Table Button.RowAction">
+            <Setter Property="Foreground" Value="#8E8E93"/>
+        </Style>
+        <Style Selector="DataGrid.Table DataGridRow:pointerover Button.RowAction, DataGrid.Table DataGridRow:selected Button.RowAction">
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}"/>
+        </Style>
         <!-- Selectable/copyable read-only text. SelectableTextBlock crashes the
              render thread on empty text (Avalonia bug), so we use a flat TextBox. -->
         <Style Selector="TextBox.copy">
@@ -17,6 +104,51 @@
             <Setter Property="Padding" Value="0"/>
             <Setter Property="MinHeight" Value="0"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+
+        <!-- Detail drawer motion (self-contained so it works on any host).
+             The panel slides in from the right edge and leaves the same way
+             on a critically damped spring (Apple response 0.35s; see the
+             Motion section of docs/DESIGN.md for the conversion). The whole
+             overlay fades on an ease-in-out so the panel is still visible
+             while it slides out; Drawer.IsOpen hides it once faded. -->
+        <Style Selector="Grid.Drawer">
+            <Setter Property="IsVisible" Value="False"/>
+            <Setter Property="Opacity" Value="0"/>
+            <Setter Property="IsHitTestVisible" Value="False"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.3" Easing="SineEaseInOut"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Grid.Drawer.open">
+            <Setter Property="Opacity" Value="1"/>
+            <Setter Property="IsHitTestVisible" Value="True"/>
+        </Style>
+        <Style Selector="Grid.Drawer > Border.DrawerPanel">
+            <Setter Property="RenderTransform" Value="translateX(500px)"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.45">
+                        <TransformOperationsTransition.Easing>
+                            <SpringEasing Mass="1" Stiffness="65" Damping="16.2"/>
+                        </TransformOperationsTransition.Easing>
+                    </TransformOperationsTransition>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Grid.Drawer.open > Border.DrawerPanel">
+            <Setter Property="RenderTransform" Value="translateX(0px)"/>
+        </Style>
+        <!-- The scrim is a Button only so a click outside closes; keep the
+             host's grey hover/press pill fill from painting over it. -->
+        <Style Selector="Button.Scrim:pointerover /template/ ContentPresenter, Button.Scrim:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="#33000000"/>
+        </Style>
+        <!-- macOS Reduce Motion (host sets Window.ReduceMotion): fade only -->
+        <Style Selector="Window.ReduceMotion Grid.Drawer > Border.DrawerPanel">
+            <Setter Property="RenderTransform" Value="translateX(0px)"/>
         </Style>
     </UserControl.Styles>
 
@@ -77,7 +209,7 @@
         </Border>
 
         <!-- ══ Summary / status bar ═══════════════════════════════════ -->
-        <Border Grid.Row="1" BorderBrush="#E5E5EA" BorderThickness="0,0,0,1" Padding="16,8"
+        <Border Classes="Appear" Grid.Row="1" BorderBrush="#E5E5EA" BorderThickness="0,0,0,1" Padding="16,8"
                 Background="#FBFBFD" IsVisible="{Binding ShowContent}">
             <DockPanel>
                 <ProgressBar DockPanel.Dock="Bottom" IsIndeterminate="True" Height="2" Margin="0,8,0,0"
@@ -94,20 +226,20 @@
         </Border>
 
         <!-- ══ Connect prompt ═════════════════════════════════════════ -->
-        <StackPanel Grid.Row="2" IsVisible="{Binding ShowConnectPrompt}"
+        <StackPanel Classes="Appear" Grid.Row="2" IsVisible="{Binding ShowConnectPrompt}"
                     HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
-            <TextBlock Text="Not connected" FontSize="16" FontWeight="Light"
+            <TextBlock Text="Not connected" FontSize="16" FontWeight="Light" LetterSpacing="-0.3"
                        Foreground="#8E8E93" HorizontalAlignment="Center"/>
             <TextBlock Text="Connect to an environment to view cloud flow run history."
                        FontSize="13" Foreground="#AEAEB2" HorizontalAlignment="Center"/>
         </StackPanel>
 
         <!-- ══ Feature-not-enabled panel ══════════════════════════════ -->
-        <Border Grid.Row="2" IsVisible="{Binding ShowNotEnabled}"
+        <Border Classes="Appear" Grid.Row="2" IsVisible="{Binding ShowNotEnabled}"
                 Padding="40" MaxWidth="560" VerticalAlignment="Center" HorizontalAlignment="Center">
             <StackPanel Spacing="12">
                 <TextBlock Text="Run history isn't stored in Dataverse for this environment"
-                           FontSize="16" FontWeight="SemiBold" Foreground="#1C1C1E"
+                           FontSize="16" FontWeight="SemiBold" LetterSpacing="-0.3" Foreground="#1C1C1E"
                            TextWrapping="Wrap" HorizontalAlignment="Center" TextAlignment="Center"/>
                 <TextBlock TextWrapping="Wrap" FontSize="13" Foreground="#636366" TextAlignment="Center"
                            Text="Cloud flow run history in Dataverse is turned off (time-to-live is 0), so there are no run records to read. An administrator can enable it in the Power Platform admin center:"/>
@@ -122,20 +254,20 @@
         </Border>
 
         <!-- ══ Runs grid ══════════════════════════════════════════════ -->
-        <DataGrid Grid.Row="2" x:Name="RunsGrid"
+        <DataGrid Classes="Appear Table" Grid.Row="2" x:Name="RunsGrid"
                   IsVisible="{Binding ShowContent}"
                   ItemsSource="{Binding Runs}"
                   AutoGenerateColumns="False"
                   IsReadOnly="True"
                   CanUserResizeColumns="True"
                   CanUserSortColumns="True"
-                  GridLinesVisibility="Horizontal"
-                  HeadersVisibility="Column"
-                  FontSize="12">
+                  HeadersVisibility="Column">
             <DataGrid.Columns>
                 <DataGridTemplateColumn Width="46" CanUserResize="False" CanUserSort="False">
                     <DataGridTemplateColumn.Header>
-                        <CheckBox Margin="6,0,0,0"
+                        <!-- No margin: the header's 12px padding lines it up
+                             with the row checkboxes (Margin 12) below. -->
+                        <CheckBox VerticalAlignment="Center"
                                   IsChecked="{ReflectionBinding DataContext.SelectAll, ElementName=Root, Mode=TwoWay}"
                                   ToolTip.Tip="Select all shown"/>
                     </DataGridTemplateColumn.Header>
@@ -166,8 +298,9 @@
                 <DataGridTemplateColumn Width="Auto" CanUserResize="False" CanUserSort="False">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate x:DataType="models:FlowRunItem">
-                            <Button Content="Details" FontSize="11" Padding="10,3" Margin="6,0"
-                                    VerticalAlignment="Center"
+                            <Button Classes="IconBtn RowAction" Content="Details ›" FontSize="11"
+                                    Padding="8,2" Margin="6,0" VerticalAlignment="Center"
+                                    ToolTip.Tip="Show run details (or double-click the row)"
                                     Command="{ReflectionBinding DataContext.InspectCommand, ElementName=Root}"
                                     CommandParameter="{ReflectionBinding}"/>
                         </DataTemplate>
@@ -177,14 +310,16 @@
         </DataGrid>
 
         <!-- ══ Detail overlay ═════════════════════════════════════════ -->
-        <Grid Grid.Row="0" Grid.RowSpan="3" IsVisible="{Binding IsDetailOpen}">
+        <Grid Classes="Drawer" Grid.Row="0" Grid.RowSpan="3"
+              behaviors:Drawer.IsOpen="{Binding IsDetailOpen}">
             <!-- Scrim: a flat full-bleed button so clicking outside closes (no code-behind) -->
-            <Button Command="{Binding CloseDetailCommand}"
+            <Button Classes="Scrim" Command="{Binding CloseDetailCommand}"
                     Background="#33000000" BorderThickness="0" CornerRadius="0" Padding="0"
                     HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                     HorizontalContentAlignment="Stretch"/>
 
-            <Border Width="480" HorizontalAlignment="Right" VerticalAlignment="Stretch"
+            <Border Classes="DrawerPanel"
+                    Width="480" HorizontalAlignment="Right" VerticalAlignment="Stretch"
                     Background="White" BorderBrush="#E5E5EA" BorderThickness="1,0,0,0">
                 <DockPanel>
                     <!-- Header -->
@@ -200,10 +335,22 @@
                                 </StackPanel>
                                 <TextBlock Text="{Binding SelectedRun.FlowName}" FontSize="13"
                                            Foreground="#1C1C1E" TextWrapping="Wrap"/>
+                                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
+                                    <Button Content="Open in Power Automate ↗"
+                                            Command="{Binding OpenInPowerAutomateCommand}"
+                                            ToolTip.Tip="{Binding PowerAutomateUnavailableReason}"
+                                            ToolTip.ShowOnDisabled="True"
+                                            FontSize="12" Padding="12,4"/>
+                                    <Button Classes="IconBtn" Content="Copy Link" FontSize="11" Padding="8,2"
+                                            VerticalAlignment="Center"
+                                            Command="{x:Static local:CopyCommand.Instance}"
+                                            CommandParameter="{Binding PowerAutomateUrl}"/>
+                                </StackPanel>
                             </StackPanel>
-                            <Button Grid.Column="1" Content="✕" Command="{Binding CloseDetailCommand}"
+                            <Button Grid.Column="1" Classes="IconBtn" Content="✕"
+                                    Command="{Binding CloseDetailCommand}"
                                     FontSize="13" Padding="8,3" VerticalAlignment="Top"
-                                    Background="Transparent" BorderThickness="0"/>
+                                    ToolTip.Tip="Close"/>
                         </Grid>
                     </Border>
 
@@ -236,12 +383,26 @@
                                 </StackPanel>
                             </Grid>
                             <StackPanel Spacing="3">
-                                <TextBlock Text="RUN ID" FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93"/>
+                                <DockPanel>
+                                    <Button DockPanel.Dock="Right" Classes="IconBtn" Content="Copy"
+                                            FontSize="11" Padding="6,0" VerticalAlignment="Center"
+                                            Command="{x:Static local:CopyCommand.Instance}"
+                                            CommandParameter="{Binding SelectedRun.RunId}"/>
+                                    <TextBlock Text="RUN ID" FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93"
+                                               VerticalAlignment="Center"/>
+                                </DockPanel>
                                 <TextBox Classes="copy" Text="{Binding SelectedRun.RunId}" FontSize="12"
                                          Foreground="#636366" FontFamily="SF Mono,Menlo,monospace"/>
                             </StackPanel>
                             <StackPanel Spacing="3" IsVisible="{Binding SelectedRun.HasParent}">
-                                <TextBlock Text="PARENT RUN ID" FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93"/>
+                                <DockPanel>
+                                    <Button DockPanel.Dock="Right" Classes="IconBtn" Content="Copy"
+                                            FontSize="11" Padding="6,0" VerticalAlignment="Center"
+                                            Command="{x:Static local:CopyCommand.Instance}"
+                                            CommandParameter="{Binding SelectedRun.ParentRunId}"/>
+                                    <TextBlock Text="PARENT RUN ID" FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93"
+                                               VerticalAlignment="Center"/>
+                                </DockPanel>
                                 <TextBox Classes="copy" Text="{Binding SelectedRun.ParentRunId}" FontSize="12"
                                          Foreground="#636366" FontFamily="SF Mono,Menlo,monospace"/>
                             </StackPanel>
@@ -255,7 +416,14 @@
                                              Foreground="#FF3B30"/>
                                 </StackPanel>
                                 <StackPanel Spacing="3" IsVisible="{Binding SelectedRun.ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                                    <TextBlock Text="ERROR MESSAGE" FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93"/>
+                                    <DockPanel>
+                                        <Button DockPanel.Dock="Right" Classes="IconBtn" Content="Copy"
+                                                FontSize="11" Padding="6,0" VerticalAlignment="Center"
+                                                Command="{x:Static local:CopyCommand.Instance}"
+                                                CommandParameter="{Binding SelectedRun.ErrorMessage}"/>
+                                        <TextBlock Text="ERROR MESSAGE" FontSize="10" FontWeight="SemiBold" Foreground="#8E8E93"
+                                                   VerticalAlignment="Center"/>
+                                    </DockPanel>
                                     <Border Background="#FBFBFD" BorderBrush="#E5E5EA" BorderThickness="1"
                                             CornerRadius="6" Padding="10" MaxHeight="280">
                                         <ScrollViewer>

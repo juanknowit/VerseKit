@@ -24,6 +24,11 @@ ones.
    effects. (We tried glass and heavy shadows; both lost to clarity — see §8.)
 4. **One shared theme.** Everything is driven from `App.axaml`. New controls reuse
    the tokens and style classes below.
+5. **Fluid, purposeful motion.** Following Apple's *Designing Fluid Interfaces*:
+   respond on pointer-down, animate state changes so they read as continuous,
+   keep every animation interruptible, and exit along the path you entered.
+   Motion explains *what changed and where it came from* — never decoration.
+   Always honour macOS **Reduce Motion**. See §7.
 
 ---
 
@@ -108,6 +113,12 @@ appear/intensify on hover or focus. No drop shadows (see §8).
 Rules:
 - **At most one `Primary`/`Success` per button group.** Everything else is default white.
 - **Red is exclusively destructive.** Never use `Danger` for a normal action.
+- **No red buttons inside lists.** Reversible per-row state is a switch (see the
+  Plugins manager below), not a red button. Reserve `Danger` pills for a sheet's
+  own destructive action (e.g. Delete in the Connection sheet), and confirm
+  destructive actions that can't easily be undone.
+- **A button keeps its text colour on hover/press** (App.axaml overrides Fluent,
+  which otherwise forces near-black onto the content — see §8).
 - Button text is always `TextPrimaryBrush` except `Danger` (red). No white-on-color.
 - Standard padding `16,7`; group spacing `8px`.
 
@@ -123,6 +134,9 @@ and rejected. Focus is indicated by the caret and selection only — keep it qui
 - `FocusAdorner` is removed (`{x:Null}`) so no square focus rectangle is drawn over
   the rounded field.
 - Placeholder text uses `PlaceholderText` (not the obsolete `Watermark`).
+- `AutoCompleteBox` (pickers like "Compare with a role…") gets the same pill
+  look. Set it on the `AutoCompleteBox` itself: its inner TextBox takes
+  border/corners/padding via TemplateBinding, which outranks the TextBox style.
 
 ---
 
@@ -145,8 +159,38 @@ and rejected. Focus is indicated by the caret and selection only — keep it qui
 - **Modal sheets** (`Border.FormCard`): white, radius `16`, `BoxShadow="0 6 20 2 #2E000000"`,
   centered, **no dim backdrop** (the card shadow alone separates it). A ✕ in the
   top-right is the dismiss control — do **not** add a duplicate Cancel button.
+  Host the card in a `Panel.SheetOverlay` driven by `behaviors:Sheet.IsOpen`
+  (never a bare `IsVisible` binding) so it opens and closes with motion, and
+  set the card's `RenderTransformOrigin` toward the control that opened it
+  (default `100%,0%` = the Settings cog; the Connection sheet uses `0%,0%`, the
+  Plugins sheet `0%,50%` — both opened from the sidebar). See §7.
 - **Status chip** (`Border.StatusChip`): neutral grey; `.connected` class swaps to a
   solid pale-green fill (`#E3F5E9`). No animation.
+- **Data tables** (`DataGrid.Table`): plugins that use Avalonia's `DataGrid` (Flow
+  Runs, Query Runner) restyle the stock Fluent grid to match the list styles:
+  12pt cells, 30px rows, `#EFEFF2` hairline row separators (no zebra — the
+  DataGrid recycles rows, so `:nth-child` stripes would shuffle on scroll), a
+  `#FAFAFB` header with 11pt SemiBold `#6E6E73` labels, hover `#0A000000`,
+  selection `{DynamicResource TintBrush}` with dark text (the Fluent default fills
+  the selected row with the saturated accent), no cell focus box, and lighter
+  checkboxes. The styles live in each plugin's `UserControl.Styles` right after
+  the DataGrid `StyleInclude` (they must beat that theme, and keep working on
+  older hosts) — copy them from Flow Runs for a new grid. Per-row actions are
+  quiet `IconBtn` links that take the accent on row hover/selection, and
+  double-clicking a row opens it.
+- **Popovers** (`Flyout`): white, radius 12, `#E5E5EA` hairline, padding `14,12`
+  (`FlyoutPresenter` in `App.axaml`). Keep flyout content ≤ ~420px wide — past
+  the presenter's MaxWidth it scrolls horizontally and clips.
+- **Switches** (`ToggleSwitch`): macOS style from `App.axaml` — no outline,
+  `#E5E5EA` track when off, accent track when on, 16px white knob.
+- **Plugins manager** (Tools › Manage): a tool's switch *is* its install state.
+  Installed rows are on; turning one off uninstalls it immediately (no
+  confirmation — it's reversible): user-installed copies are deleted, and a
+  bundled tool, whose files ship inside the app, is recorded as switched off in
+  `~/.config/versekit/plugins.json`. Available rows are off; turning one on
+  installs it from its GitHub release (or restores the bundled copy, downloading
+  only if the registry has a newer version). A newer registry version shows as an
+  "Update to vX" button on the installed row. Switches lock while a change runs.
 - **Sidebar list** (`ListBox.SidebarList`): selection is a pale accent tint
   (`{DynamicResource TintBrush}`, derived from the chosen accent) with dark text,
   Finder-style — not a saturated fill.
@@ -166,6 +210,23 @@ System font (`-apple-system` equivalent via Avalonia default). Sizes in use:
 | Badges / chips | 9–11 Bold |
 | Code editor | 13, `Cascadia Code, SF Mono, Menlo, monospace` |
 
+**Tracking (`LetterSpacing`) is size-specific — never one value for all sizes.**
+Apple's system font wants text tightened as it grows and opened up when small
+and uppercase. Set it inline next to the `FontSize` (plugins included, so it
+works on any host):
+
+| Size | `LetterSpacing` |
+|---|---|
+| 17 (sheet titles) | `-0.4` |
+| 16 (empty-state titles, About) | `-0.3` |
+| 15 | `-0.2` |
+| 14 (detail headers) | `-0.15` |
+| 13 and body text | `0` (leave unset) |
+| 9–11 uppercase headers / badges | `+0.5`–`0.6` |
+
+Display sizes (20+) are left at `0`: we can't rely on the renderer switching to
+SF Pro Display's optical size, so Apple's display tracking values don't apply.
+
 ---
 
 ## 7. Iconography & motion
@@ -176,8 +237,71 @@ System font (`-apple-system` equivalent via Avalonia default). Sizes in use:
 - **App icon:** generated by `scripts/create-icon.py` -> a dotted "global data"
   globe on a blue squircle, with the wordmark "VERSE" spaced wide across the centre
   so it reads as the equator line. Re-run that + `generate-icon.sh` to change it.
-- **Motion:** essentially none. We tried an animated connection glow and removed it.
-  Prefer static state changes. If you add motion, keep it sub-300ms and optional.
+- **Motion:** see below.
+
+### Motion
+
+Motion follows Apple's fluid-interface rules (WWDC 2018 *Designing Fluid
+Interfaces*), translated to Avalonia. All of it lives in the **Motion** section
+of `App.axaml`; reuse those classes rather than writing per-view animations.
+
+**Rules**
+
+1. **Respond on pointer-down.** Feedback happens the instant something is
+   pressed, never on release. Don't add delays, debounces or "wait for the
+   animation" on the input path.
+2. **Interruptible, from the current value.** Use `Transitions` (they start from
+   the live on-screen value), so toggling mid-animation reverses smoothly. Never
+   block input while something animates.
+3. **Critically damped springs by default** (damping ratio `1.0`, no overshoot).
+   Bounce is reserved for gestures that carry momentum (a flick or throw) — we
+   have none today, so nothing bounces.
+4. **Spatial consistency.** Things leave the way they came in, and grow from the
+   control that opened them.
+5. **Motion explains, it doesn't decorate.** Animate a change in state or place
+   (something opening, appearing, being selected). Don't animate hover washes on
+   list rows or anything that would slow down scanning a list — those stay
+   instant, like Finder.
+6. **Reduce Motion.** When macOS *Reduce motion* is on, the host window gets the
+   `ReduceMotion` class (`MainWindowViewModel.ReduceMotion`, read via
+   `MacAccessibility`). Scaling and sliding are switched off under
+   `Window.ReduceMotion …` selectors; opacity fades remain.
+
+**What's in place**
+
+| Element | How | Values |
+|---|---|---|
+| Every `Button` | Press dip (`Button:pressed`) | `scale(0.97)`, 120ms `CubicEaseOut` |
+| Small buttons (`IconBtn`, `DeleteBtn`, `Swatch`) | Deeper dip so it's visible | `scale(0.9)` |
+| Full-width rows (`SidebarProfile`) and scrims (`Scrim`) | No dip — press fill only | — |
+| Modal sheets (`Panel.SheetOverlay` + `behaviors:Sheet.IsOpen`) | Fade + grow from 96% toward the trigger, shrink back on close | opacity 200ms; scale spring R 0.35s |
+| Content that appears (`Classes="Appear"`) | Fade in when it becomes visible | 180ms `CubicEaseOut`, opacity only |
+| A newly opened tool (`ContentControl.Workspace`) | Fade in | 180ms, opacity only |
+| Accent swatch ring (`Ellipse.SwatchRing`) | Grows in | spring R 0.30s |
+| Segmented control (Background setting) | Selected capsule cross-fades | 150ms brush transition |
+| Hover-revealed row buttons (`DeleteBtn`) | Fade in on row hover | 120ms |
+| Flow Runs detail drawer | Slides in from the right edge and back out | spring R 0.35s; self-contained in the plugin |
+
+**Springs in Avalonia.** `SpringEasing` runs in *normalised* time (0–1 of the
+transition `Duration`), not seconds. To use Apple's *response* `R` (seconds) with
+damping ratio 1.0 and a transition `Duration` `D`:
+
+```
+ωn        = 2π / R × D
+Stiffness = ωn²         (Mass = 1)
+Damping   = 2 × ωn
+```
+
+Pick `D ≈ 1.2–1.3 × R` so the spring has settled (< 0.5% left) before the
+transition ends. Current values: R 0.35s / D 0.45s → `Stiffness 65, Damping 16.2`;
+R 0.30s / D 0.35s → `Stiffness 54, Damping 14.7`.
+
+**Motion in plugins.** Plugins inherit the classes above, but a plugin can be
+installed on an *older* host that doesn't have them. So a plugin may only use
+the shared motion classes as *optional polish* (they no-op on old hosts — e.g.
+`Appear`). Anything a plugin's layout depends on — like an overlay that must
+start hidden — must be self-contained in the plugin (see the Flow Runs
+`Drawer` behavior and its local styles).
 
 ---
 
@@ -206,6 +330,37 @@ These cost real iteration. Respect them:
    permanently disabled — annotate every property the `CanExecute` reads.
 6. **`RequestedThemeVariant="Light"`** is set on `Application`. The app is
    light-only; dark mode is not supported and styles assume light surfaces.
+7. **Later styles win, and `Transitions` is a single property.** Avalonia has no
+   CSS-style specificity: when two matching styles set the same property, the one
+   later in `App.axaml` wins. A style that sets `Transitions` *replaces* the
+   shared `Button` press transition — so list every transition the element needs
+   (e.g. `Button.DeleteBtn` sets Opacity *and* RenderTransform) and place it after
+   the shared rule.
+8. **Disabling a control does not clear keyboard focus.** A sheet hidden with
+   `Opacity=0` + `IsEnabled=False` can still hold focus and receive typing. Use
+   `behaviors:Sheet.IsOpen`, which sets `IsVisible=False` once the fade-out
+   finishes (that does clear focus).
+9. **Give animated transforms an explicit resting value** (`scale(1)`,
+   `translateX(0px)`), not an unset `RenderTransform`, so a transition always has
+   a start and end value to interpolate between.
+10. **Don't cross-fade plugin views with `TransitioningContentControl`.** It keeps
+    the outgoing view in the tree during the fade; a plugin that returns a cached
+    view from `CreateView()` would then be in two places at once and throw. Fade
+    the incoming view only (`ContentControl.Workspace`).
+11. **Fluent recolours button text on hover/press.** Its `:pointerover`/`:pressed`
+    rules set `ButtonForegroundPointerOver`/`Pressed` (near-black) on the
+    `ContentPresenter`, and plain-text content has no `TextBlock` for
+    `Button:pointerover TextBlock` rules to reach — so red/grey/accent text
+    buttons flipped to black. `App.axaml` binds the presenter's Foreground back
+    to the button's in those states; style a button's text colour via its
+    `Foreground`, not via descendant `TextBlock` selectors.
+12. **Values set inside a control template outrank plain styles.** To override
+    a Fluent template part (e.g. the ToggleSwitch knob size/fill), use a state
+    selector (`:checked`/`:unchecked`, `:pointerover`) — those are style
+    triggers, which beat template values; a stateless `/template/` rule may
+    silently do nothing.
+13. **A full-bleed `Button` used as a scrim** inherits the grey hover/press pill
+    fill. Give it the `Scrim` class and pin its hover/pressed background.
 
 ---
 
@@ -215,7 +370,10 @@ These cost real iteration. Respect them:
 - [ ] Buttons use a class from §3; at most one `Primary` per group; red only for destructive.
 - [ ] Inputs are white pills, radius 18, no hover/focus border.
 - [ ] New surfaces follow §5 (white cards, no card shadow, `#F8F8FA` bars, hairlines `#E5E5EA`).
-- [ ] No drop shadows on buttons/inputs or cards; no glass *behind controls*; minimal/no motion.
+- [ ] No drop shadows on buttons/inputs or cards; no glass *behind controls*.
+- [ ] Motion follows §7: modal overlays use `Panel.SheetOverlay` + `Sheet.IsOpen`; panes that appear use `Appear`; nothing decorative; works with Reduce Motion on.
+- [ ] Titles 14–17pt carry the tracking from §6.
+- [ ] Plugins: anything the layout depends on is self-contained (works on an older host).
 - [ ] Destructive actions confirm before acting (see the publish/delete pattern).
 - [ ] Any new `CanExecute` command has matching `NotifyCanExecuteChangedFor`.
 - [ ] Verified by running the app, not just building (see `/verify`).

@@ -65,6 +65,15 @@ public sealed class ConnectionManager : IConnectionProvider, IDisposable
     public async Task ConnectAsync(ConnectionProfile profile, string? secret = null,
         bool forceReauth = false, CancellationToken ct = default)
     {
+        // Older profiles may hold a URL without "https://", which MSAL rejects
+        // as a scope. Fix it up and persist the corrected profile.
+        var url = EnvironmentUrls.Normalize(profile.EnvironmentUrl);
+        if (url != profile.EnvironmentUrl)
+        {
+            profile = WithEnvironmentUrl(profile, url);
+            await SaveProfileAsync(profile, ct: ct);
+        }
+
         var usesSecret = profile.AuthMethod is AuthMethod.ClientSecret or AuthMethod.Certificate;
         if (usesSecret && !string.IsNullOrWhiteSpace(secret))
             await _secrets.WriteAsync(profile.Name, secret, ct);
@@ -243,6 +252,19 @@ public sealed class ConnectionManager : IConnectionProvider, IDisposable
         AuthMethod = p.AuthMethod,
         ClientId = p.ClientId,
         TenantId = tenantId,
+        RedirectUri = p.RedirectUri,
+        CertificatePath = p.CertificatePath,
+        Folder = p.Folder
+    };
+
+    /// <summary>Copy a profile with a corrected environment URL (ConnectionProfile is immutable).</summary>
+    private static ConnectionProfile WithEnvironmentUrl(ConnectionProfile p, string url) => new()
+    {
+        Name = p.Name,
+        EnvironmentUrl = url,
+        AuthMethod = p.AuthMethod,
+        ClientId = p.ClientId,
+        TenantId = p.TenantId,
         RedirectUri = p.RedirectUri,
         CertificatePath = p.CertificatePath,
         Folder = p.Folder

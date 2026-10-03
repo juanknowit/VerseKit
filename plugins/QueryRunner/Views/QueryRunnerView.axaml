@@ -1,11 +1,68 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:QueryRunner.ViewModels"
+             xmlns:models="using:QueryRunner.Models"
              x:Class="QueryRunner.Views.QueryRunnerView"
              x:DataType="vm:QueryRunnerViewModel">
 
+    <UserControl.KeyBindings>
+        <KeyBinding Gesture="Cmd+Enter" Command="{Binding RunCommand}"/>
+    </UserControl.KeyBindings>
+
     <UserControl.Styles>
         <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
+        <!-- ══ Table look for DataGrid ════════════════════════════════
+             Restyles the stock Fluent DataGrid to match the tools' list
+             styles (DESIGN.md §5 "Data tables"): compact 12pt rows,
+             hairline separators, a quiet header, hover wash and a pale
+             accent selection with dark text (the Fluent default fills the
+             selected row with the saturated accent). Local to the plugin
+             so it applies on any host version. -->
+        <Style Selector="DataGrid.Table">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="#1C1C1E"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="RowHeight" Value="30"/>
+            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="#EFEFF2"/>
+        </Style>
+        <Style Selector="DataGrid.Table /template/ Rectangle#PART_ColumnHeadersAndRowsSeparator">
+            <Setter Property="Fill" Value="#E5E5EA"/>
+        </Style>
+        <Style Selector="DataGrid.Table DataGridColumnHeader">
+            <Setter Property="Background" Value="#FAFAFB"/>
+            <Setter Property="Foreground" Value="#6E6E73"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="MinHeight" Value="28"/>
+            <Setter Property="Padding" Value="12,0,0,0"/>
+            <Setter Property="SeparatorBrush" Value="#E5E5EA"/>
+        </Style>
+        <Style Selector="DataGrid.Table DataGridColumnHeader:pointerover /template/ Grid#PART_ColumnHeaderRoot">
+            <Setter Property="Background" Value="#F2F2F5"/>
+        </Style>
+        <Style Selector="DataGrid.Table DataGridColumnHeader:pressed /template/ Grid#PART_ColumnHeaderRoot">
+            <Setter Property="Background" Value="#EAEAEE"/>
+        </Style>
+        <Style Selector="DataGrid.Table DataGridCell">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="MinHeight" Value="30"/>
+        </Style>
+        <!-- No black focus/currency box around the clicked cell -->
+        <Style Selector="DataGrid.Table DataGridCell /template/ Grid#FocusVisual, DataGrid.Table DataGridCell /template/ Rectangle#CurrencyVisual">
+            <Setter Property="IsVisible" Value="False"/>
+        </Style>
+        <Style Selector="DataGrid.Table DataGridRow:pointerover /template/ Rectangle#BackgroundRectangle">
+            <Setter Property="Fill" Value="#0A000000"/>
+            <Setter Property="Opacity" Value="1"/>
+        </Style>
+        <Style Selector="DataGrid.Table DataGridRow:selected /template/ Rectangle#BackgroundRectangle">
+            <Setter Property="Fill" Value="{DynamicResource TintBrush}"/>
+            <Setter Property="Opacity" Value="1"/>
+        </Style>
+        <Style Selector="DataGrid.Table DataGridRow:selected:pointerover /template/ Rectangle#BackgroundRectangle">
+            <Setter Property="Fill" Value="{DynamicResource TintHoverBrush}"/>
+        </Style>
     </UserControl.Styles>
 
     <Grid RowDefinitions="Auto,Auto,*">
@@ -27,9 +84,137 @@
                 <ComboBox Grid.Column="1" Width="120" VerticalAlignment="Center"
                           ItemsSource="{Binding Modes}" SelectedIndex="{Binding ModeIndex}"/>
 
-                <Button Grid.Column="2" Content="Run" Classes="Primary"
-                        Command="{Binding RunCommand}" IsEnabled="{Binding !IsRunning}"
-                        Margin="8,0,0,0" Padding="16,5" VerticalAlignment="Center"/>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" Margin="8,0,0,0"
+                            VerticalAlignment="Center">
+                    <Button Content="Run" Classes="Primary"
+                            Command="{Binding RunCommand}" IsEnabled="{Binding !IsRunning}"
+                            Padding="16,5" VerticalAlignment="Center"
+                            ToolTip.Tip="Run the query (⌘↩)"/>
+
+                    <!-- Recent + saved queries for this connection -->
+                    <Button x:Name="QueriesButton" Content="Queries ▾" Padding="12,5"
+                            VerticalAlignment="Center" ToolTip.Tip="Recent and saved queries">
+                        <Button.Flyout>
+                            <Flyout Placement="BottomEdgeAlignedLeft">
+                                <StackPanel Width="400" Spacing="8">
+                                    <TextBlock Text="SAVE CURRENT QUERY" FontSize="10" FontWeight="SemiBold"
+                                               Foreground="#8E8E93" LetterSpacing="0.6"/>
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBox Grid.Column="0" Text="{Binding SaveName}"
+                                                 PlaceholderText="Name (optional)"/>
+                                        <Button Grid.Column="1" Content="Save" Margin="8,0,0,0"
+                                                Command="{Binding SaveQueryCommand}"/>
+                                    </Grid>
+
+                                    <TextBlock Text="SAVED" FontSize="10" FontWeight="SemiBold"
+                                               Foreground="#8E8E93" LetterSpacing="0.6" Margin="0,6,0,0"/>
+                                    <TextBlock Text="No saved queries yet." FontSize="12" Foreground="#AEAEB2"
+                                               IsVisible="{Binding !SavedQueries.Count}" Margin="8,0"/>
+                                    <ScrollViewer MaxHeight="200" HorizontalScrollBarVisibility="Disabled">
+                                        <ItemsControl ItemsSource="{Binding SavedQueries}">
+                                    <ItemsControl.Styles>
+                                        <Style Selector="Button.QueryItem">
+                                            <Setter Property="Background" Value="Transparent"/>
+                                            <Setter Property="BorderThickness" Value="0"/>
+                                            <Setter Property="CornerRadius" Value="8"/>
+                                            <Setter Property="Padding" Value="8,5"/>
+                                            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+                                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                        </Style>
+                                        <Style Selector="Button.QueryItem:pointerover /template/ ContentPresenter">
+                                            <Setter Property="Background" Value="#0F000000"/>
+                                        </Style>
+                                        <Style Selector="Button.QueryItem:pressed">
+                                            <Setter Property="RenderTransform" Value="scale(1)"/>
+                                        </Style>
+                                    </ItemsControl.Styles>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="models:StoredQuery">
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <Button Grid.Column="0" Classes="QueryItem"
+                                                        Command="{Binding $parent[ItemsControl].((vm:QueryRunnerViewModel)DataContext).LoadQueryCommand}"
+                                                        CommandParameter="{Binding}"
+                                                        ToolTip.Tip="{Binding Text}">
+                                                    <Grid ColumnDefinitions="Auto,*,Auto">
+                                                        <Border Grid.Column="0" Background="{Binding ModeColor}" CornerRadius="4"
+                                                                Padding="5,1" VerticalAlignment="Center" Margin="0,0,8,0">
+                                                            <TextBlock Text="{Binding ModeLabel}" FontSize="8" FontWeight="Bold"
+                                                                       Foreground="White"/>
+                                                        </Border>
+                                                        <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="12"
+                                                                   Foreground="#1C1C1E" TextTrimming="CharacterEllipsis"
+                                                                   VerticalAlignment="Center"/>
+                                                        <TextBlock Grid.Column="2" Text="{Binding WhenLabel}" FontSize="10.5"
+                                                                   Foreground="#AEAEB2" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                                                    </Grid>
+                                                </Button>
+                                                <Button Grid.Column="1" Classes="IconBtn" Content="✕" FontSize="11"
+                                                        Padding="6,2" VerticalAlignment="Center" ToolTip.Tip="Delete saved query"
+                                                        Command="{Binding $parent[ItemsControl].((vm:QueryRunnerViewModel)DataContext).DeleteSavedCommand}"
+                                                        CommandParameter="{Binding}"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+
+                                    <DockPanel Margin="0,6,0,0">
+                                        <Button DockPanel.Dock="Right" Classes="IconBtn" Content="Clear" FontSize="11"
+                                                Padding="6,1" Command="{Binding ClearRecentCommand}"
+                                                IsVisible="{Binding !!RecentQueries.Count}"/>
+                                        <TextBlock Text="RECENT" FontSize="10" FontWeight="SemiBold"
+                                                   Foreground="#8E8E93" LetterSpacing="0.6" VerticalAlignment="Center"/>
+                                    </DockPanel>
+                                    <TextBlock Text="Queries you run appear here." FontSize="12" Foreground="#AEAEB2"
+                                               IsVisible="{Binding !RecentQueries.Count}" Margin="8,0"/>
+                                    <ScrollViewer MaxHeight="240" HorizontalScrollBarVisibility="Disabled">
+                                        <ItemsControl ItemsSource="{Binding RecentQueries}">
+                                    <ItemsControl.Styles>
+                                        <Style Selector="Button.QueryItem">
+                                            <Setter Property="Background" Value="Transparent"/>
+                                            <Setter Property="BorderThickness" Value="0"/>
+                                            <Setter Property="CornerRadius" Value="8"/>
+                                            <Setter Property="Padding" Value="8,5"/>
+                                            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+                                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                        </Style>
+                                        <Style Selector="Button.QueryItem:pointerover /template/ ContentPresenter">
+                                            <Setter Property="Background" Value="#0F000000"/>
+                                        </Style>
+                                        <Style Selector="Button.QueryItem:pressed">
+                                            <Setter Property="RenderTransform" Value="scale(1)"/>
+                                        </Style>
+                                    </ItemsControl.Styles>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="models:StoredQuery">
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <Button Grid.Column="0" Classes="QueryItem"
+                                                        Command="{Binding $parent[ItemsControl].((vm:QueryRunnerViewModel)DataContext).LoadQueryCommand}"
+                                                        CommandParameter="{Binding}"
+                                                        ToolTip.Tip="{Binding Text}">
+                                                    <Grid ColumnDefinitions="Auto,*,Auto">
+                                                        <Border Grid.Column="0" Background="{Binding ModeColor}" CornerRadius="4"
+                                                                Padding="5,1" VerticalAlignment="Center" Margin="0,0,8,0">
+                                                            <TextBlock Text="{Binding ModeLabel}" FontSize="8" FontWeight="Bold"
+                                                                       Foreground="White"/>
+                                                        </Border>
+                                                        <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="12"
+                                                                   Foreground="#1C1C1E" TextTrimming="CharacterEllipsis"
+                                                                   VerticalAlignment="Center"/>
+                                                        <TextBlock Grid.Column="2" Text="{Binding WhenLabel}" FontSize="10.5"
+                                                                   Foreground="#AEAEB2" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                                                    </Grid>
+                                                </Button>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </StackPanel>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+                </StackPanel>
 
                 <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="8"
                             VerticalAlignment="Center" IsVisible="{Binding HasResults}">
@@ -67,8 +252,7 @@
                   IsReadOnly="True"
                   CanUserResizeColumns="True"
                   CanUserSortColumns="False"
-                  GridLinesVisibility="Horizontal"
-                  HeadersVisibility="Column"
-                  FontSize="12"/>
+                  Classes="Table"
+                  HeadersVisibility="Column"/>
     </Grid>
 </UserControl>

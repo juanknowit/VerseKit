@@ -5,8 +5,8 @@ using VerseKit.App.Services;
 
 namespace VerseKit.App.ViewModels;
 
-/// <summary>A row in the "Available plugins" list: one registry entry plus its
-/// install state relative to what's currently installed.</summary>
+/// <summary>An Available row in the Plugins manager: a registry tool that isn't
+/// installed. Its switch installs it (downloaded from the GitHub release).</summary>
 public sealed partial class PluginCatalogItemViewModel : ObservableObject
 {
     public PluginCatalogItemViewModel(PluginRegistryEntry entry) => Entry = entry;
@@ -30,22 +30,23 @@ public sealed partial class PluginCatalogItemViewModel : ObservableObject
         }
     }
 
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ActionLabel), nameof(CanInstall))]
-    private bool _isInstalled;
+    /// <summary>True for a built-in (bundled) tool the user switched off: turning
+    /// it back on restores the copy shipped with the app.</summary>
+    public bool IsBuiltIn { get; init; }
 
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ActionLabel), nameof(CanInstall))]
-    private bool _isUpdateAvailable;
+    /// <summary>Invoked when the user switches the tool on (parent installs it).</summary>
+    public System.Action<PluginCatalogItemViewModel>? TurnedOn { get; set; }
 
+    /// <summary>Available rows start off; switching on requests an install.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ActionLabel), nameof(CanInstall))]
+    private bool _isOn;
+
+    partial void OnIsOnChanged(bool value)
+    {
+        if (value) TurnedOn?.Invoke(this);
+    }
+
+    /// <summary>True while this tool is being downloaded/installed.</summary>
+    [ObservableProperty]
     private bool _isBusy;
-
-    public string ActionLabel =>
-        IsBusy ? "Installing…" :
-        IsUpdateAvailable ? "Update" :
-        IsInstalled ? "Installed" : "Install";
-
-    public bool CanInstall => !IsBusy && (!IsInstalled || IsUpdateAvailable);
 }

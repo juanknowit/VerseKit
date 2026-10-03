@@ -2,9 +2,14 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:ResourceManager.ViewModels"
              xmlns:models="using:ResourceManager.Models"
+             xmlns:local="using:ResourceManager.Views"
              xmlns:ae="using:AvaloniaEdit"
              x:Class="ResourceManager.Views.WebResourcesView"
              x:DataType="vm:WebResourcesViewModel">
+
+    <UserControl.KeyBindings>
+        <KeyBinding Gesture="Escape" Command="{Binding HideDiffCommand}"/>
+    </UserControl.KeyBindings>
 
     <Grid RowDefinitions="Auto,Auto,*">
 
@@ -65,7 +70,7 @@
                 Padding="12,7">
             <Grid ColumnDefinitions="*,Auto">
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
-                    <TextBox PlaceholderText="Filter by name…"
+                    <TextBox Classes="Search" PlaceholderText="Filter by name…"
                              Text="{Binding FilterText}"
                              Width="240"/>
                     <Button Content="Load 5,000 more"
@@ -102,6 +107,9 @@
                           Background="Transparent"
                           BorderThickness="0"
                           Padding="6,4">
+                    <TreeView.KeyBindings>
+                        <KeyBinding Gesture="Cmd+C" Command="{x:Static local:CopyCommand.Instance}" CommandParameter="{Binding SelectedResource.Name}"/>
+                    </TreeView.KeyBindings>
                     <TreeView.DataTemplates>
 
                         <!-- Solution group node -->
@@ -118,7 +126,13 @@
                         <!-- Web resource leaf -->
                         <DataTemplate DataType="models:WebResourceItem"
                                       x:DataType="models:WebResourceItem">
-                            <Grid ColumnDefinitions="36,*" Margin="0,1">
+                            <Grid ColumnDefinitions="36,*" Margin="0,1" Background="Transparent">
+                                <Grid.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="Copy Name" Command="{x:Static local:CopyCommand.Instance}" CommandParameter="{Binding Name}"/>
+                                        <MenuItem Header="Copy ID" Command="{x:Static local:CopyCommand.Instance}" CommandParameter="{Binding Id}"/>
+                                    </ContextMenu>
+                                </Grid.ContextMenu>
                                 <Border Grid.Column="0"
                                         Background="{Binding TypeColor}"
                                         CornerRadius="5"
@@ -176,13 +190,13 @@
             <Grid Grid.Column="2" RowDefinitions="Auto,*,Auto" Background="White">
 
                 <!-- Empty state -->
-                <StackPanel Grid.Row="0" Grid.RowSpan="3"
+                <StackPanel Classes="Appear" Grid.Row="0" Grid.RowSpan="3"
                             IsVisible="{Binding IsNothingSelected}"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
                             Spacing="8">
                     <TextBlock Text="Select a resource to edit"
-                               FontSize="16" FontWeight="Light"
+                               FontSize="16" FontWeight="Light" LetterSpacing="-0.3"
                                Foreground="#8E8E93"
                                HorizontalAlignment="Center"/>
                     <TextBlock Text="Use the list on the left to choose a web resource."
@@ -192,7 +206,7 @@
                 </StackPanel>
 
                 <!-- ── Resource header (when something selected) ───── -->
-                <Border Grid.Row="0"
+                <Border Classes="Appear" Grid.Row="0"
                         IsVisible="{Binding IsEditorVisible}"
                         Background="#F8F8FA"
                         BorderBrush="#E5E5EA"
@@ -236,11 +250,11 @@
                 </Border>
 
                 <!-- ── Editor area ───────────────────────────────── -->
-                <Panel Grid.Row="1" IsVisible="{Binding IsEditorVisible}">
+                <Panel Classes="Appear" Grid.Row="1" IsVisible="{Binding IsEditorVisible}">
 
                     <!-- Code editor (AvaloniaEdit + TextMate highlighting) -->
                     <ae:TextEditor x:Name="CodeEditor"
-                                   IsVisible="{Binding IsTextResource}"
+                                   IsVisible="{Binding IsCodeEditorVisible}"
                                    FontFamily="Cascadia Code,SF Mono,Menlo,Courier New,monospace"
                                    FontSize="13"
                                    Background="White"
@@ -251,13 +265,49 @@
                                    VerticalScrollBarVisibility="Auto"
                                    Padding="8,8,0,0"/>
 
+                    <!-- Review Changes: saved vs edited, unified line diff -->
+                    <DockPanel Classes="Appear" IsVisible="{Binding IsDiffVisible}">
+                        <Border DockPanel.Dock="Top" Background="#FBFBFD"
+                                BorderBrush="#E5E5EA" BorderThickness="0,0,0,1" Padding="14,6">
+                            <TextBlock Text="{Binding DiffSummary}" FontSize="11" Foreground="#636366"/>
+                        </Border>
+                        <ListBox ItemsSource="{Binding DiffLines}"
+                                 Background="White" BorderThickness="0" Padding="0,4"
+                                 FontFamily="Cascadia Code,SF Mono,Menlo,Courier New,monospace"
+                                 FontSize="12">
+                            <ListBox.Styles>
+                                <Style Selector="ListBoxItem">
+                                    <Setter Property="Padding" Value="0"/>
+                                    <Setter Property="MinHeight" Value="0"/>
+                                </Style>
+                                <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter, ListBoxItem:selected /template/ ContentPresenter">
+                                    <Setter Property="Background" Value="Transparent"/>
+                                </Style>
+                            </ListBox.Styles>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="models:DiffLine">
+                                    <Grid ColumnDefinitions="44,44,18,*" Background="{Binding Background}" MinHeight="19">
+                                        <TextBlock Grid.Column="0" Text="{Binding OldNumber}" Foreground="#AEAEB2"
+                                                   TextAlignment="Right" Margin="0,1,6,1"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding NewNumber}" Foreground="#AEAEB2"
+                                                   TextAlignment="Right" Margin="0,1,6,1"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding Marker}" Foreground="{Binding Foreground}"
+                                                   FontWeight="Bold" Margin="0,1"/>
+                                        <TextBlock Grid.Column="3" Text="{Binding Text}" Foreground="{Binding Foreground}"
+                                                   Margin="0,1,8,1" TextWrapping="NoWrap"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </DockPanel>
+
                     <!-- Binary resource message -->
                     <StackPanel IsVisible="{Binding IsBinaryResource}"
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
                                 Spacing="8">
                         <TextBlock Text="Binary resource"
-                                   FontSize="16" FontWeight="Light"
+                                   FontSize="16" FontWeight="Light" LetterSpacing="-0.3"
                                    Foreground="#8E8E93"
                                    HorizontalAlignment="Center"/>
                         <TextBlock Text="{Binding SelectedResource.TypeLabel}"
@@ -271,14 +321,14 @@
                 </Panel>
 
                 <!-- ── Action bar ────────────────────────────────── -->
-                <Border Grid.Row="2"
+                <Border Classes="Appear" Grid.Row="2"
                         IsVisible="{Binding IsEditorVisible}"
                         Background="#F8F8FA"
                         BorderBrush="#E5E5EA"
                         BorderThickness="0,1,0,0"
                         Padding="12,8">
 
-                    <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto">
+                    <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto">
 
                         <Button Grid.Column="0"
                                 Classes="Primary"
@@ -294,18 +344,25 @@
                                 Margin="0,0,8,0"/>
 
                         <Button Grid.Column="2"
+                                Content="{Binding DiffButtonLabel}"
+                                Command="{Binding ToggleDiffCommand}"
+                                IsVisible="{Binding IsTextResource}"
+                                ToolTip.Tip="Compare your edits with the saved version"
+                                Margin="0,0,8,0"/>
+
+                        <Button Grid.Column="3"
                                 Content="Check Syntax"
                                 Command="{Binding CheckSyntaxCommand}"
                                 IsVisible="{Binding IsScriptResource}"
                                 Margin="0,0,8,0"/>
 
-                        <Button Grid.Column="3"
+                        <Button Grid.Column="4"
                                 Classes="Danger"
                                 Content="Delete"
                                 Command="{Binding DeleteResourceCommand}"
                                 ToolTip.Tip="Delete this web resource from the environment"/>
 
-                        <TextBlock Grid.Column="4"
+                        <TextBlock Grid.Column="5"
                                    Text="{Binding EditorStatus}"
                                    FontSize="12"
                                    Foreground="#636366"
@@ -314,7 +371,7 @@
                                    TextTrimming="CharacterEllipsis"/>
 
                         <!-- Managed badge -->
-                        <Border Grid.Column="5"
+                        <Border Grid.Column="6"
                                 Background="#FF3B30"
                                 CornerRadius="5"
                                 Padding="6,3"

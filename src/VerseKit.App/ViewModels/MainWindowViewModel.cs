@@ -68,7 +68,9 @@ public partial class MainWindowViewModel : ViewModelBase
     // Connection
     [ObservableProperty] private string _connectionStatus = "Not connected";
     [ObservableProperty] private PluginEntry? _selectedPlugin;
-    [ObservableProperty] private bool _isConnectionPanelVisible;
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CloseTopSheetCommand))]
+    private bool _isConnectionPanelVisible;
     [ObservableProperty] private bool _isConnected;
 
     // Workspace
@@ -76,7 +78,12 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private string? _activationError;
 
     // Settings & updates
-    [ObservableProperty] private bool _isSettingsPanelVisible;
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CloseTopSheetCommand))]
+    private bool _isSettingsPanelVisible;
+
+    /// <summary>macOS "Reduce motion" — styles swap movement for cross-fades.</summary>
+    public bool ReduceMotion { get; } = MacAccessibility.ShouldReduceMotion();
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(DownloadUpdateCommand))]
@@ -105,7 +112,9 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>All discovered plugins (enabled + disabled) for the manager sheet.</summary>
     public ObservableCollection<PluginItemViewModel> PluginItems { get; } = [];
 
-    [ObservableProperty] private bool _isPluginsPanelVisible;
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CloseTopSheetCommand))]
+    private bool _isPluginsPanelVisible;
     [ObservableProperty] private string? _pluginStatus;
 
     /// <summary>Set by the view to pick a folder to install (TopLevel.StorageProvider).</summary>
@@ -113,7 +122,19 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private string _userPluginRoot = "";
     private string _bundledPluginRoot = "";
-    private HashSet<Guid> _disabledPlugins = [];
+    // Built-in (bundled) tools the user switched off. Their files ship inside the
+    // app and can't be deleted, so "uninstalled" is recorded here instead (the
+    // file key is still "disabled" for compatibility). Applies to bundled copies
+    // only; ids of formerly disabled user-installed tools are simply ignored.
+    private HashSet<Guid> _hiddenBundled = [];
+
+    /// <summary>True while a tool is being installed, uninstalled or updated.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanChangePlugins))]
+    private bool _isPluginBusy;
+
+    /// <summary>Plugin switches are locked while a change runs (no overlapping resets).</summary>
+    public bool CanChangePlugins => !IsPluginBusy;
 
     /// <summary>Plugins available to install (not installed, or with an update).</summary>
     public ObservableCollection<PluginCatalogItemViewModel> CatalogItems { get; } = [];
@@ -334,7 +355,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _bundledPluginRoot = Path.GetFullPath(
             Path.Combine(AppContext.BaseDirectory, "..", "Resources", "plugins"));
 
-        _disabledPlugins = PluginPreferences.LoadDisabled();
+        _hiddenBundled = PluginPreferences.LoadDisabled();
 
         await DiscoverAllAsync(ct);
         RebuildPluginLists();
@@ -363,14 +384,17 @@ public partial class MainWindowViewModel : ViewModelBase
         Plugins.Clear();
         PluginItems.Clear();
 
+        // Every listed tool is installed and on; a switched-off built-in copy is
+        // skipped (a user-installed copy of the same tool still shows).
         var seen = new HashSet<Guid>();
         foreach (var entry in _pluginHost.LoadedPlugins)
         {
-            if (!seen.Add(entry.Plugin.PluginId)) continue;
+            var id = entry.Plugin.PluginId;
+            if (entry.Origin == PluginOrigin.Bundled && _hiddenBundled.Contains(id)) continue;
+            if (!seen.Add(id)) continue;
 
-            var enabled = !_disabledPlugins.Contains(entry.Plugin.PluginId);
-            PluginItems.Add(new PluginItemViewModel(entry, enabled) { EnabledChanged = OnPluginEnabledToggled });
-            if (enabled) Plugins.Add(entry);
+            PluginItems.Add(new PluginItemViewModel(entry) { TurnedOff = item => _ = UninstallAsync(item) });
+            Plugins.Add(entry);
         }
 
         // Keep the "Available" list in sync with what's now installed.
@@ -543,61 +567,43 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
-    [RelayCommand]
-    private async Task RemovePluginAsync(PluginItemViewModel? item)
+    /// <summary>
+    /// Switching an installed tool off uninstalls it: user-installed copies are
+    /// deleted, and a built-in copy is recorded as switched off. If the registry
+    /// lists it, it reappears under Available, where switching it on reinstalls.
+    /// </summary>
+    private async Task UninstallAsync(PluginItemViewModel item)
     {
-        if (item is null || !item.IsRemovable) return;
+        if (IsPluginBusy) { item.IsOn = true; return; }
+        IsPluginBusy = true;
 
-        var ok = ConfirmAsync is null || await ConfirmAsync(
-            "Remove plugin?",
-            $"'{item.Name}' will be deleted from the plugins folder.",
-            "Remove");
-        if (!ok) return;
-
-        var dir = item.Entry.PluginDirectory;
+        var id = item.Entry.Plugin.PluginId;
+        var name = item.Name;
+        // Capture every copy before the reset clears the loaded list.
+        var copies = _pluginHost.LoadedPlugins.Where(e => e.Plugin.PluginId == id).ToList();
         try
         {
             await _pluginHost.ResetAsync();
-            if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true);
-
-            _disabledPlugins.Remove(item.Entry.Plugin.PluginId);
-            PluginPreferences.SaveDisabled(_disabledPlugins);
-
-            await DiscoverAllAsync(CancellationToken.None);
-            RebuildPluginLists();
-            PluginStatus = $"Removed '{item.Name}'.";
+            foreach (var copy in copies)
+            {
+                if (copy.Origin == PluginOrigin.Bundled)
+                    _hiddenBundled.Add(id);
+                else if (Directory.Exists(copy.PluginDirectory))
+                    Directory.Delete(copy.PluginDirectory, recursive: true);
+            }
+            PluginPreferences.SaveDisabled(_hiddenBundled);
+            PluginStatus = $"Uninstalled {name}.";
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to remove plugin '{Name}'", item.Name);
-            PluginStatus = $"Remove failed: {ex.Message}";
+            _logger.LogError(ex, "Failed to uninstall plugin '{Name}'", name);
+            PluginStatus = $"Uninstall failed: {ex.Message}";
+        }
+        finally
+        {
             await DiscoverAllAsync(CancellationToken.None);
             RebuildPluginLists();
-        }
-    }
-
-    /// <summary>Row toggle handler: persist the disabled set and add/remove the
-    /// plugin from the sidebar live (the assembly stays loaded until restart).</summary>
-    private void OnPluginEnabledToggled(PluginItemViewModel item)
-    {
-        var id = item.Entry.Plugin.PluginId;
-        if (item.IsEnabled) _disabledPlugins.Remove(id);
-        else _disabledPlugins.Add(id);
-        PluginPreferences.SaveDisabled(_disabledPlugins);
-
-        var inSidebar = Plugins.FirstOrDefault(p => p.Plugin.PluginId == id);
-        if (item.IsEnabled && inSidebar is null)
-        {
-            Plugins.Add(item.Entry);
-        }
-        else if (!item.IsEnabled && inSidebar is not null)
-        {
-            if (ReferenceEquals(SelectedPlugin, inSidebar))
-            {
-                SelectedPlugin = null;
-                ActivePluginView = null;
-            }
-            Plugins.Remove(inSidebar);
+            IsPluginBusy = false;
         }
     }
 
@@ -631,60 +637,127 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
-    /// <summary>Rebuilds the "Available" list from the cached registry, showing only
-    /// plugins that aren't installed — or that have a newer version available.</summary>
+    /// <summary>
+    /// Rebuilds "Available" — registry tools that aren't installed, plus built-in
+    /// tools the user switched off (listed even when the registry is offline, as
+    /// they restore from the app bundle) — and flags installed tools that have a
+    /// newer registry version.
+    /// </summary>
     private void RebuildCatalog()
     {
         CatalogItems.Clear();
+        var installed = PluginItems.ToDictionary(
+            p => p.Entry.Plugin.PluginId.ToString(), StringComparer.OrdinalIgnoreCase);
+        var hiddenBuiltIn = _pluginHost.LoadedPlugins
+            .Where(e => e.Origin == PluginOrigin.Bundled && _hiddenBundled.Contains(e.Plugin.PluginId))
+            .GroupBy(e => e.Plugin.PluginId.ToString(), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
+        foreach (var item in PluginItems) item.UpdateEntry = null;
+
         foreach (var entry in _registry)
         {
-            var installed = PluginItems.FirstOrDefault(p =>
-                p.Entry.Plugin.PluginId.ToString().Equals(entry.Id, StringComparison.OrdinalIgnoreCase));
-            var updateAvailable = installed is not null
-                && Version.TryParse(entry.Version, out var avail)
-                && Version.TryParse(installed.Entry.Plugin.Version, out var cur)
-                && avail > cur;
-
-            // Already installed and current → hide from "Available".
-            if (installed is not null && !updateAvailable) continue;
-
-            CatalogItems.Add(new PluginCatalogItemViewModel(entry)
+            if (installed.TryGetValue(entry.Id, out var item))
             {
-                IsInstalled = installed is not null,
-                IsUpdateAvailable = updateAvailable,
-            });
+                if (IsNewer(entry.Version, item.Entry.Plugin.Version)) item.UpdateEntry = entry;
+                continue;
+            }
+            AddAvailable(entry, isBuiltIn: hiddenBuiltIn.ContainsKey(entry.Id));
         }
 
-        if (_registry.Count > 0)
+        // Switched-off built-ins the registry doesn't (or can't, offline) list.
+        foreach (var (id, bundled) in hiddenBuiltIn)
+        {
+            if (_registry.Any(r => r.Id.Equals(id, StringComparison.OrdinalIgnoreCase))) continue;
+            AddAvailable(new PluginRegistryEntry(
+                id, bundled.Plugin.Name, bundled.Plugin.Description, bundled.Plugin.Version,
+                "VerseKit", DownloadUrl: "", Sha256: null), isBuiltIn: true);
+        }
+
+        if (_registry.Count > 0 || CatalogItems.Count > 0)
             CatalogStatus = CatalogItems.Count == 0 ? "All available plugins are installed." : null;
     }
 
-    [RelayCommand]
-    private async Task InstallFromCatalogAsync(PluginCatalogItemViewModel? item)
-    {
-        if (item is null || !item.CanInstall) return;
+    private void AddAvailable(PluginRegistryEntry entry, bool isBuiltIn) =>
+        CatalogItems.Add(new PluginCatalogItemViewModel(entry)
+        {
+            IsBuiltIn = isBuiltIn,
+            TurnedOn = item => _ = InstallAsync(item),
+        });
 
+    private static bool IsNewer(string candidate, string current) =>
+        Version.TryParse(candidate, out var a) && Version.TryParse(current, out var b) && a > b;
+
+    /// <summary>
+    /// Switching an Available tool on installs it: a switched-off built-in is
+    /// restored from the app bundle (downloading only if the registry has a newer
+    /// version); anything else is downloaded from its GitHub release.
+    /// </summary>
+    private async Task InstallAsync(PluginCatalogItemViewModel item)
+    {
+        if (IsPluginBusy) { item.IsOn = false; return; }
+        IsPluginBusy = true;
         item.IsBusy = true;
-        CatalogStatus = $"Installing {item.Name}…";
+
         var name = item.Name;
+        var bundled = _pluginHost.LoadedPlugins.FirstOrDefault(e =>
+            e.Origin == PluginOrigin.Bundled
+            && e.Plugin.PluginId.ToString().Equals(item.Entry.Id, StringComparison.OrdinalIgnoreCase));
+        var download = !string.IsNullOrEmpty(item.Entry.DownloadUrl)
+                       && (bundled is null || IsNewer(item.Entry.Version, bundled.Plugin.Version));
+        var installed = false;
         try
         {
-            await _pluginHost.ResetAsync();
-            await _catalog.InstallAsync(item.Entry, _userPluginRoot, progress: null, ct: CancellationToken.None);
-            await DiscoverAllAsync(CancellationToken.None);
-            RebuildPluginLists();          // also rebuilds the catalog (drops the now-installed row)
-            CatalogStatus = $"Installed {name}.";
+            if (bundled is not null && _hiddenBundled.Remove(bundled.Plugin.PluginId))
+                PluginPreferences.SaveDisabled(_hiddenBundled);
+
+            if (download)
+            {
+                PluginStatus = $"Installing {name}…";
+                await _pluginHost.ResetAsync();
+                await _catalog.InstallAsync(item.Entry, _userPluginRoot, progress: null, ct: CancellationToken.None);
+            }
+            installed = true;
+            PluginStatus = $"Installed {name}.";
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to install '{Name}' from catalog", name);
-            await DiscoverAllAsync(CancellationToken.None);
-            RebuildPluginLists();
-            CatalogStatus = $"Install failed: {ex.Message}";
+            _logger.LogError(ex, "Failed to install '{Name}'", name);
+            PluginStatus = $"Install failed: {ex.Message}";
         }
         finally
         {
+            await DiscoverAllAsync(CancellationToken.None);
+            RebuildPluginLists();          // also rebuilds Available (drops the installed row)
+            if (!installed && bundled is null) item.IsOn = false;
             item.IsBusy = false;
+            IsPluginBusy = false;
+        }
+    }
+
+    /// <summary>Installs the newer registry version of an installed tool.</summary>
+    [RelayCommand]
+    private async Task UpdatePluginAsync(PluginItemViewModel? item)
+    {
+        if (item?.UpdateEntry is not { } entry || IsPluginBusy) return;
+        IsPluginBusy = true;
+        try
+        {
+            PluginStatus = $"Updating {item.Name}…";
+            await _pluginHost.ResetAsync();
+            await _catalog.InstallAsync(entry, _userPluginRoot, progress: null, ct: CancellationToken.None);
+            PluginStatus = $"Updated {item.Name} to v{entry.Version}.";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update '{Name}'", item.Name);
+            PluginStatus = $"Update failed: {ex.Message}";
+        }
+        finally
+        {
+            await DiscoverAllAsync(CancellationToken.None);
+            RebuildPluginLists();
+            IsPluginBusy = false;
         }
     }
 
@@ -692,6 +765,19 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [RelayCommand]
     private void ToggleSettingsPanel() => IsSettingsPanelVisible = !IsSettingsPanelVisible;
+
+    private bool IsAnySheetOpen => IsPluginsPanelVisible || IsSettingsPanelVisible || IsConnectionPanelVisible;
+
+    /// <summary>Esc: close the frontmost sheet (Plugins over Settings over
+    /// Connection, matching their ZIndex). Disabled when none is open so Esc
+    /// is left for whatever else wants it.</summary>
+    [RelayCommand(CanExecute = nameof(IsAnySheetOpen))]
+    private void CloseTopSheet()
+    {
+        if (IsPluginsPanelVisible) IsPluginsPanelVisible = false;
+        else if (IsSettingsPanelVisible) IsSettingsPanelVisible = false;
+        else IsConnectionPanelVisible = false;
+    }
 
     [RelayCommand]
     private void OpenGitHub() =>

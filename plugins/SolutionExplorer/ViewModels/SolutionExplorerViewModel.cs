@@ -33,6 +33,15 @@ public sealed partial class SolutionExplorerViewModel : ObservableObject
     [ObservableProperty] private string _componentFilterText = string.Empty;
     [ObservableProperty] private string _exportStatus = string.Empty;
 
+    // Missing-dependency check (before export)
+    public ObservableCollection<MissingDependencyItem> MissingDependencies { get; } = [];
+    [ObservableProperty] private bool _isCheckingDependencies;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasDependencyResult))]
+    private string _dependencyStatus = string.Empty;
+    [ObservableProperty] private bool _hasMissingDependencies;
+    public bool HasDependencyResult => DependencyStatus.Length > 0;
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsSolutionSelected), nameof(CanExportUnmanaged))]
     private SolutionItem? _selectedSolution;
@@ -66,20 +75,9 @@ public sealed partial class SolutionExplorerViewModel : ObservableObject
             }));
     }
 
-    private CancellationTokenSource? _filterDebounce;
-
-    partial void OnFilterTextChanged(string value)
-    {
-        _filterDebounce?.Cancel();
-        var cts = _filterDebounce = new CancellationTokenSource();
-        _ = DebouncedFilterAsync(cts.Token);
-    }
-
-    private async Task DebouncedFilterAsync(CancellationToken ct)
-    {
-        try { await Task.Delay(200, ct); ApplyFilter(); }
-        catch (OperationCanceledException) { }
-    }
+    // Filter on every keystroke — local and cheap, and instant feedback
+    // matters more than saving work (DESIGN.md §7, "respond immediately").
+    partial void OnFilterTextChanged(string value) => ApplyFilter();
 
     private void ApplyFilter()
     {
@@ -153,6 +151,9 @@ public sealed partial class SolutionExplorerViewModel : ObservableObject
 
     partial void OnSelectedSolutionChanged(SolutionItem? value)
     {
+        MissingDependencies.Clear();
+        HasMissingDependencies = false;
+        DependencyStatus = string.Empty;
         Components.Clear();
         _allComponents = [];
         ComponentsStatus = string.Empty;
@@ -256,6 +257,13 @@ public sealed partial class SolutionExplorerViewModel : ObservableObject
             q.PageInfo.PagingCookie = page.PagingCookie;
         }
 
+        return await ResolveComponentsAsync(client, raw, ct);
+    }
+
+    /// <summary>Resolves a friendly name for each (type, object id), in order.</summary>
+    private static async Task<List<ComponentItem>> ResolveComponentsAsync(
+        ServiceClient client, IReadOnlyList<(int Type, Guid ObjectId)> raw, CancellationToken ct)
+    {
         // 2. Resolve names for record-based component types (batched IN queries).
         var nameById = new Dictionary<Guid, string>();
         foreach (var group in raw.GroupBy(r => r.Type))
@@ -342,6 +350,72 @@ public sealed partial class SolutionExplorerViewModel : ObservableObject
             items.Add(new ComponentItem { Name = name, TypeName = ComponentTypeName(type), Detail = detail });
         }
         return items;
+    }
+
+    // ── Missing dependencies ───────────────────────────────────────────
+
+    /// <summary>
+    /// Lists components the solution depends on but doesn't include — the
+    /// things that would make an import into another environment fail.
+    /// </summary>
+    [RelayCommand]
+    private async Task CheckDependenciesAsync(CancellationToken ct)
+    {
+        if (SelectedSolution is not { } solution || IsCheckingDependencies) return;
+
+        IsCheckingDependencies = true;
+        MissingDependencies.Clear();
+        HasMissingDependencies = false;
+        DependencyStatus = "Checking for missing dependencies…";
+        try
+        {
+            var client = await _connectionProvider.GetActiveConnectionAsync(ct);
+            var resp = (RetrieveMissingDependenciesResponse)await client.ExecuteAsync(
+                new RetrieveMissingDependenciesRequest { SolutionUniqueName = solution.UniqueName }, ct);
+
+            static (int, Guid) Part(Entity e, string prefix) => (
+                e.GetAttributeValue<OptionSetValue>(prefix + "componenttype")?.Value ?? -1,
+                e.GetAttributeValue<Guid?>(prefix + "componentobjectid") ?? Guid.Empty);
+
+            var pairs = resp.EntityCollection.Entities
+                .Select(e => (Required: Part(e, "required"), RequiredBy: Part(e, "dependent")))
+                .ToList();
+
+            // Resolve both sides in one pass, then pair them back up.
+            var resolved = await ResolveComponentsAsync(client,
+                pairs.SelectMany(p => new[] { p.Required, p.RequiredBy }).ToList(), ct);
+            var items = pairs
+                .Select((_, i) => new MissingDependencyItem { Required = resolved[2 * i], RequiredBy = resolved[2 * i + 1] })
+                .OrderBy(d => d.Required.TypeName, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(d => d.Required.Name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (SelectedSolution != solution) return;
+                foreach (var d in items) MissingDependencies.Add(d);
+                HasMissingDependencies = items.Count > 0;
+                DependencyStatus = items.Count == 0
+                    ? "No missing dependencies — this solution should import cleanly."
+                    : $"{items.Count} missing dependenc{(items.Count == 1 ? "y" : "ies")} — the target environment must already have these, or the import will fail.";
+            });
+        }
+        catch (Exception ex)
+        {
+            Dispatcher.UIThread.Post(() => DependencyStatus = $"Dependency check failed: {ex.Message}");
+        }
+        finally
+        {
+            Dispatcher.UIThread.Post(() => IsCheckingDependencies = false);
+        }
+    }
+
+    [RelayCommand]
+    private void DismissDependencies()
+    {
+        MissingDependencies.Clear();
+        HasMissingDependencies = false;
+        DependencyStatus = string.Empty;
     }
 
     // ── Export ─────────────────────────────────────────────────────────

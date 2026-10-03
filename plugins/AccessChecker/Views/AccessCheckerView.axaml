@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:AccessChecker.ViewModels"
              xmlns:models="using:AccessChecker.Models"
+             xmlns:local="using:AccessChecker.Views"
              x:Class="AccessChecker.Views.AccessCheckerView"
              x:DataType="vm:AccessCheckerViewModel">
 
@@ -18,7 +19,7 @@
                            FontWeight="SemiBold" FontSize="13"
                            Foreground="#1C1C1E" VerticalAlignment="Center"
                            Margin="0,0,12,0"/>
-                <TextBox Grid.Column="1"
+                <TextBox Classes="Search" Grid.Column="1"
                          PlaceholderText="Filter users by name or email…"
                          Text="{Binding FilterText}"
                          HorizontalAlignment="Left" Width="280"/>
@@ -41,9 +42,19 @@
                          Background="Transparent" BorderThickness="0"
                          Padding="6,4"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.KeyBindings>
+                        <KeyBinding Gesture="Cmd+C" Command="{x:Static local:CopyCommand.Instance}" CommandParameter="{Binding SelectedUser.Name}"/>
+                    </ListBox.KeyBindings>
                     <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="models:UserItem">
-                            <Grid ColumnDefinitions="Auto,*" Margin="0,1">
+                            <Grid ColumnDefinitions="Auto,*" Margin="0,1" Background="Transparent">
+                                <Grid.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="Copy Name" Command="{x:Static local:CopyCommand.Instance}" CommandParameter="{Binding Name}"/>
+                                        <MenuItem Header="Copy Email" Command="{x:Static local:CopyCommand.Instance}" CommandParameter="{Binding Secondary}"/>
+                                        <MenuItem Header="Copy User ID" Command="{x:Static local:CopyCommand.Instance}" CommandParameter="{Binding UserId}"/>
+                                    </ContextMenu>
+                                </Grid.ContextMenu>
                                 <Border Grid.Column="0"
                                         Background="{Binding BadgeColor}"
                                         CornerRadius="7" Width="30" Height="30"
@@ -90,11 +101,11 @@
             <Grid Grid.Column="2" RowDefinitions="Auto,*" Background="White">
 
                 <!-- Empty state -->
-                <StackPanel Grid.Row="0" Grid.RowSpan="2"
+                <StackPanel Classes="Appear" Grid.Row="0" Grid.RowSpan="2"
                             IsVisible="{Binding !IsUserSelected}"
                             HorizontalAlignment="Center" VerticalAlignment="Center"
                             Spacing="8">
-                    <TextBlock Text="Select a user" FontSize="16" FontWeight="Light"
+                    <TextBlock Text="Select a user" FontSize="16" FontWeight="Light" LetterSpacing="-0.3"
                                Foreground="#8E8E93" HorizontalAlignment="Center"/>
                     <TextBlock Text="Pick a user on the left to see their effective access and roles."
                                FontSize="13" Foreground="#AEAEB2"
@@ -102,13 +113,13 @@
                 </StackPanel>
 
                 <!-- Header -->
-                <Border Grid.Row="0" IsVisible="{Binding IsUserSelected}"
+                <Border Classes="Appear" Grid.Row="0" IsVisible="{Binding IsUserSelected}"
                         Background="#F8F8FA" BorderBrush="#E5E5EA"
                         BorderThickness="0,0,0,1" Padding="16,10">
                     <Grid ColumnDefinitions="*,Auto">
                         <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
                             <TextBlock Text="{Binding SelectedUser.Title}"
-                                       FontSize="14" FontWeight="SemiBold" Foreground="#1C1C1E"/>
+                                       FontSize="14" FontWeight="SemiBold" LetterSpacing="-0.15" Foreground="#1C1C1E"/>
                             <TextBlock Text="{Binding SelectedUser.Secondary}"
                                        FontSize="11" Foreground="#636366"/>
                         </StackPanel>
@@ -121,7 +132,7 @@
                 </Border>
 
                 <!-- Tabs: Effective access | Roles -->
-                <TabControl Grid.Row="1" IsVisible="{Binding IsUserSelected}"
+                <TabControl Classes="Appear" Grid.Row="1" IsVisible="{Binding IsUserSelected}"
                             SelectedIndex="{Binding DetailTabIndex}"
                             Padding="0" Margin="0">
 
@@ -170,6 +181,45 @@
                                          IsVisible="{Binding IsAccessLoading}"
                                          Height="2" Margin="0"/>
 
+                            <!-- "Why": the roles behind each privilege of the selected table -->
+                            <Border DockPanel.Dock="Bottom" Classes="Appear"
+                                    IsVisible="{Binding IsPrivilegeSelected}"
+                                    Background="#FBFBFD" BorderBrush="#E5E5EA" BorderThickness="0,1,0,0"
+                                    Padding="14,10" MaxHeight="240">
+                                <DockPanel>
+                                    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,8">
+                                        <TextBlock Grid.Column="0" FontSize="12" FontWeight="SemiBold" Foreground="#1C1C1E"
+                                                   TextTrimming="CharacterEllipsis" VerticalAlignment="Center">
+                                            <Run Text="Why — "/><Run Text="{Binding SelectedPrivilege.Title}"/>
+                                        </TextBlock>
+                                        <TextBlock Grid.Column="1" Text="Hover a cell for the same detail"
+                                                   FontSize="11" Foreground="#AEAEB2" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                                        <ItemsControl ItemsSource="{Binding SelectedPrivilege.Why}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="models:WhyLine">
+                                                    <Grid ColumnDefinitions="80,56,*" Margin="0,2">
+                                                        <TextBlock Grid.Column="0" Text="{Binding Privilege}" FontSize="12"
+                                                                   Foreground="#3C3C43" VerticalAlignment="Center"/>
+                                                        <Border Grid.Column="1" Background="{Binding Cell.Color}"
+                                                                CornerRadius="4" Height="18" Margin="0,0,10,0"
+                                                                VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding Cell.Short}" FontSize="9" FontWeight="SemiBold"
+                                                                       Foreground="{Binding Cell.TextColor}"
+                                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                        <TextBlock Grid.Column="2" Text="{Binding GrantedBy}" FontSize="12"
+                                                                   Foreground="#636366" TextWrapping="Wrap"
+                                                                   VerticalAlignment="Center"/>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </DockPanel>
+                            </Border>
+
                             <ScrollViewer HorizontalScrollBarVisibility="Auto"
                                           VerticalScrollBarVisibility="Disabled">
                                 <DockPanel Width="950">
@@ -200,12 +250,18 @@
                                     </Grid>
 
                                     <ListBox ItemsSource="{Binding Privileges}"
+                                             SelectedItem="{Binding SelectedPrivilege}"
                                              Background="Transparent" BorderThickness="0" Padding="0"
                                              ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                                         <ListBox.ItemTemplate>
                                             <DataTemplate x:DataType="models:PrivilegeRow">
                                                 <Grid Height="32" Width="950"
-                                                      ColumnDefinitions="170,150,70,70,70,70,70,70,70,70,70">
+                                                      ColumnDefinitions="170,150,70,70,70,70,70,70,70,70,70" Background="Transparent">
+                                                    <Grid.ContextMenu>
+                                                        <ContextMenu>
+                                                            <MenuItem Header="Copy Logical Name" Command="{x:Static local:CopyCommand.Instance}" CommandParameter="{Binding LogicalName}"/>
+                                                        </ContextMenu>
+                                                    </Grid.ContextMenu>
                                                     <TextBlock Grid.Column="0" Text="{Binding Title}"
                                                                FontSize="12" Foreground="#1C1C1E"
                                                                VerticalAlignment="Center" ClipToBounds="True"
@@ -222,7 +278,7 @@
                                                     <Border Grid.Column="3" Background="{Binding Create.Color}"
                                                             IsVisible="{Binding Create.Applicable}"
                                                             CornerRadius="4" Height="20" Margin="4,0"
-                                                            VerticalAlignment="Center" ToolTip.Tip="{Binding Create.Full}">
+                                                            VerticalAlignment="Center" ToolTip.Tip="{Binding Create.Tooltip}">
                                                         <TextBlock Text="{Binding Create.Short}" FontSize="9" FontWeight="SemiBold"
                                                                    Foreground="{Binding Create.TextColor}"
                                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -230,7 +286,7 @@
                                                     <Border Grid.Column="4" Background="{Binding Read.Color}"
                                                             IsVisible="{Binding Read.Applicable}"
                                                             CornerRadius="4" Height="20" Margin="4,0"
-                                                            VerticalAlignment="Center" ToolTip.Tip="{Binding Read.Full}">
+                                                            VerticalAlignment="Center" ToolTip.Tip="{Binding Read.Tooltip}">
                                                         <TextBlock Text="{Binding Read.Short}" FontSize="9" FontWeight="SemiBold"
                                                                    Foreground="{Binding Read.TextColor}"
                                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -238,7 +294,7 @@
                                                     <Border Grid.Column="5" Background="{Binding Write.Color}"
                                                             IsVisible="{Binding Write.Applicable}"
                                                             CornerRadius="4" Height="20" Margin="4,0"
-                                                            VerticalAlignment="Center" ToolTip.Tip="{Binding Write.Full}">
+                                                            VerticalAlignment="Center" ToolTip.Tip="{Binding Write.Tooltip}">
                                                         <TextBlock Text="{Binding Write.Short}" FontSize="9" FontWeight="SemiBold"
                                                                    Foreground="{Binding Write.TextColor}"
                                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -246,7 +302,7 @@
                                                     <Border Grid.Column="6" Background="{Binding Delete.Color}"
                                                             IsVisible="{Binding Delete.Applicable}"
                                                             CornerRadius="4" Height="20" Margin="4,0"
-                                                            VerticalAlignment="Center" ToolTip.Tip="{Binding Delete.Full}">
+                                                            VerticalAlignment="Center" ToolTip.Tip="{Binding Delete.Tooltip}">
                                                         <TextBlock Text="{Binding Delete.Short}" FontSize="9" FontWeight="SemiBold"
                                                                    Foreground="{Binding Delete.TextColor}"
                                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -254,7 +310,7 @@
                                                     <Border Grid.Column="7" Background="{Binding Append.Color}"
                                                             IsVisible="{Binding Append.Applicable}"
                                                             CornerRadius="4" Height="20" Margin="4,0"
-                                                            VerticalAlignment="Center" ToolTip.Tip="{Binding Append.Full}">
+                                                            VerticalAlignment="Center" ToolTip.Tip="{Binding Append.Tooltip}">
                                                         <TextBlock Text="{Binding Append.Short}" FontSize="9" FontWeight="SemiBold"
                                                                    Foreground="{Binding Append.TextColor}"
                                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -262,7 +318,7 @@
                                                     <Border Grid.Column="8" Background="{Binding AppendTo.Color}"
                                                             IsVisible="{Binding AppendTo.Applicable}"
                                                             CornerRadius="4" Height="20" Margin="4,0"
-                                                            VerticalAlignment="Center" ToolTip.Tip="{Binding AppendTo.Full}">
+                                                            VerticalAlignment="Center" ToolTip.Tip="{Binding AppendTo.Tooltip}">
                                                         <TextBlock Text="{Binding AppendTo.Short}" FontSize="9" FontWeight="SemiBold"
                                                                    Foreground="{Binding AppendTo.TextColor}"
                                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -270,7 +326,7 @@
                                                     <Border Grid.Column="9" Background="{Binding Assign.Color}"
                                                             IsVisible="{Binding Assign.Applicable}"
                                                             CornerRadius="4" Height="20" Margin="4,0"
-                                                            VerticalAlignment="Center" ToolTip.Tip="{Binding Assign.Full}">
+                                                            VerticalAlignment="Center" ToolTip.Tip="{Binding Assign.Tooltip}">
                                                         <TextBlock Text="{Binding Assign.Short}" FontSize="9" FontWeight="SemiBold"
                                                                    Foreground="{Binding Assign.TextColor}"
                                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -278,7 +334,7 @@
                                                     <Border Grid.Column="10" Background="{Binding Share.Color}"
                                                             IsVisible="{Binding Share.Applicable}"
                                                             CornerRadius="4" Height="20" Margin="4,0"
-                                                            VerticalAlignment="Center" ToolTip.Tip="{Binding Share.Full}">
+                                                            VerticalAlignment="Center" ToolTip.Tip="{Binding Share.Tooltip}">
                                                         <TextBlock Text="{Binding Share.Short}" FontSize="9" FontWeight="SemiBold"
                                                                    Foreground="{Binding Share.TextColor}"
                                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -338,7 +394,12 @@
                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate x:DataType="models:UserRoleItem">
-                                        <Grid ColumnDefinitions="90,1.6*,1.4*" Height="34">
+                                        <Grid ColumnDefinitions="90,1.6*,1.4*" Height="34" Background="Transparent">
+                                            <Grid.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem Header="Copy Role Name" Command="{x:Static local:CopyCommand.Instance}" CommandParameter="{Binding Name}"/>
+                                                </ContextMenu>
+                                            </Grid.ContextMenu>
                                             <Border Grid.Column="0" Background="{Binding SourceColor}"
                                                     CornerRadius="4" Padding="5,1"
                                                     HorizontalAlignment="Left" VerticalAlignment="Center"
@@ -413,9 +474,9 @@
                                          IsVisible="{Binding IsCompareLoading}" Height="2" Margin="0"/>
 
                             <!-- Empty state when no compare user chosen -->
-                            <StackPanel DockPanel.Dock="Top" Margin="0,40,0,0" Spacing="6"
+                            <StackPanel Classes="Appear" DockPanel.Dock="Top" Margin="0,40,0,0" Spacing="6"
                                         IsVisible="{Binding CompareUser, Converter={x:Static ObjectConverters.IsNull}}">
-                                <TextBlock Text="Pick a user to compare" FontSize="15" FontWeight="Light"
+                                <TextBlock Text="Pick a user to compare" FontSize="15" FontWeight="Light" LetterSpacing="-0.2"
                                            Foreground="#8E8E93" HorizontalAlignment="Center"/>
                                 <TextBlock Text="Choose a second user above to see where their effective access differs."
                                            FontSize="12" Foreground="#AEAEB2" HorizontalAlignment="Center"/>
@@ -443,7 +504,12 @@
                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate x:DataType="models:ComparisonRow">
-                                        <Grid Height="32" ColumnDefinitions="170,150,90,*,*">
+                                        <Grid Height="32" ColumnDefinitions="170,150,90,*,*" Background="Transparent">
+                                            <Grid.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem Header="Copy Logical Name" Command="{x:Static local:CopyCommand.Instance}" CommandParameter="{Binding LogicalName}"/>
+                                                </ContextMenu>
+                                            </Grid.ContextMenu>
                                             <Border Grid.Column="0" Width="3" Background="{Binding AccentColor}"
                                                     HorizontalAlignment="Left" VerticalAlignment="Stretch"/>
                                             <TextBlock Grid.Column="0" Text="{Binding Title}" FontSize="12" Foreground="#1C1C1E"

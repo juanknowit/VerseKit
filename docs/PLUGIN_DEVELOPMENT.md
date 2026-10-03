@@ -101,6 +101,23 @@ The host scans each subdirectory, creates an `AssemblyLoadContext`, and probes f
 - Avalonia `DataGrid` is the equivalent of WinForms `DataGridView`.
 - Use `Avalonia.Svg` for scalable icons.
 
+## Look & Feel
+
+Plugin views render inside the host window and inherit its theme from
+`App.axaml` — buttons, inputs, list styles and motion. Follow
+[DESIGN.md](DESIGN.md), in particular:
+
+- **Motion (§7).** Buttons already get press feedback from the host. Add
+  `Classes="Appear"` to panes that show/hide (detail panes, empty states) so they
+  fade in. Never animate for decoration, and keep anything that moves working
+  with macOS *Reduce Motion* (`Window.ReduceMotion …` selectors).
+- **Typography (§6).** Give 14–17pt titles the size-specific `LetterSpacing`.
+- **Work on older hosts.** Your plugin may be installed on an older VerseKit
+  that lacks newer shared styles. Shared classes are fine as *optional polish*
+  (they silently no-op), but anything your layout depends on — e.g. an overlay
+  that must start hidden — must be self-contained in the plugin. The Flow Runs
+  plugin's `Drawer` behavior and local drawer styles are the reference example.
+
 ## Common Dataverse Operations
 
 ```csharp

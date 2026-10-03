@@ -3,10 +3,11 @@ using System.Text.Json;
 namespace VerseKit.App.Services;
 
 /// <summary>
-/// Persists which plugins the user has disabled (by <see cref="System.Guid"/>),
-/// in <c>~/.config/versekit/plugins.json</c>. Disabled plugins are still
-/// discovered (so the manager can list and re-enable them) but are kept out of
-/// the sidebar tool list.
+/// Persists the bundled plugins the user has switched off (uninstalled), by
+/// <see cref="System.Guid"/>, in <c>~/.config/versekit/plugins.json</c> (key
+/// "Disabled", kept for compatibility). Their files ship inside the app, so they
+/// are still discovered but listed under Available instead of Installed. Ids of
+/// user-installed plugins (from the old enable/disable switch) are ignored.
 /// </summary>
 public static class PluginPreferences
 {
